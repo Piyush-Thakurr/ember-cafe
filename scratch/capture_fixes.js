@@ -36,8 +36,8 @@ async function run() {
     consoleErrors.push(err.toString());
   });
 
-  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bust14...');
-  await page.goto('http://localhost:3000/?cache=bust14', { waitUntil: 'networkidle0', timeout: 30000 });
+  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bust19...');
+  await page.goto('http://localhost:3000/?cache=bust19', { waitUntil: 'networkidle0', timeout: 30000 });
 
   // Function to measure FPS over 60 frames
   async function measureFps() {
@@ -79,43 +79,87 @@ async function run() {
   console.log('Waiting for preloader and intro...');
   await new Promise(r => setTimeout(r, 3400));
 
-  // 2. State 1 (targetY = 850)
-  console.log('Scrolling to State 1 (y=850)...');
-  await scrollToY(850);
-  const state1Fps = await measureFps();
-  const state1Path = path.join(artifactDir, 'stage2a_fix_1_state1.png');
-  await page.screenshot({ path: state1Path });
-  console.log(`State 1 captured: ${state1Fps} FPS -> ${state1Path}`);
+  // 2. Exploded view (c: targetY = 6300)
+  console.log('Scrolling to Exploded View (y=6300)...');
+  await scrollToY(6300);
+  const explodedFps = await measureFps();
+  const explodedPath = path.join(artifactDir, 'exploded_view_fixed.png');
+  await page.screenshot({ path: explodedPath });
+  console.log(`Exploded View captured: ${explodedFps} FPS -> ${explodedPath}`);
 
-  // 3. Bean rain with text (targetY = 8800)
-  console.log('Scrolling to Bean Rain with text (y=8800)...');
-  await scrollToY(8800);
-  const beanRainFps = await measureFps();
-  const beanRainPath = path.join(artifactDir, 'stage2a_fix_2_beanrain.png');
-  await page.screenshot({ path: beanRainPath });
-  console.log(`Bean Rain with text captured: ${beanRainFps} FPS -> ${beanRainPath}`);
+  // 3. Bean rain halfway (b: targetY = 8700)
+  console.log('Scrolling to Bean Rain halfway (y=8700)...');
+  await scrollToY(8700);
+  const beanRainHalfwayFps = await measureFps();
+  const beanRainHalfwayPath = path.join(artifactDir, 'bean_rain_halfway.png');
+  await page.screenshot({ path: beanRainHalfwayPath });
+  console.log(`Bean Rain halfway captured: ${beanRainHalfwayFps} FPS -> ${beanRainHalfwayPath}`);
 
-  // 4. Bean rain 300px further down (targetY = 9100)
-  console.log('Scrolling to Bean Rain 300px further down (y=9100)...');
-  await scrollToY(9100);
-  const beanRainFurtherFps = await measureFps();
-  const beanRainFurtherPath = path.join(artifactDir, 'stage2a_fix_3_beanrain_300px.png');
-  await page.screenshot({ path: beanRainFurtherPath });
-  console.log(`Bean Rain 300px further captured: ${beanRainFurtherFps} FPS -> ${beanRainFurtherPath}`);
+  // 4. Bean rain at its fullest (a: targetY = 9300)
+  console.log('Scrolling to Bean Rain at its fullest (y=9300)...');
+  await scrollToY(9300);
+  const beanRainFullestFps = await measureFps();
+  const beanRainFullestPath = path.join(artifactDir, 'bean_rain_fullest.png');
+  await page.screenshot({ path: beanRainFullestPath });
+  console.log(`Bean Rain at fullest captured: ${beanRainFullestFps} FPS -> ${beanRainFullestPath}`);
+
+  // Check metrics & DOM inspection
+  const domInspection = await page.evaluate(() => {
+    const lineLeft = document.querySelector('.line-left');
+    const lineRight = document.querySelector('.line-right');
+    const subline = document.querySelector('.bean-rain-subline');
+    const fgCanvas = document.getElementById('webgl-beans-fg');
+
+    const lRect = lineLeft ? lineLeft.getBoundingClientRect() : null;
+    const rRect = lineRight ? lineRight.getBoundingClientRect() : null;
+    const sRect = subline ? subline.getBoundingClientRect() : null;
+
+    return {
+      lineLeft: {
+        text: lineLeft ? lineLeft.textContent : null,
+        fontFamily: lineLeft ? window.getComputedStyle(lineLeft).fontFamily : null,
+        fontSize: lineLeft ? window.getComputedStyle(lineLeft).fontSize : null,
+        color: lineLeft ? window.getComputedStyle(lineLeft).color : null,
+        left: lRect ? lRect.left : null,
+        right: lRect ? lRect.right : null,
+        width: lRect ? lRect.width : null
+      },
+      lineRight: {
+        text: lineRight ? lineRight.textContent : null,
+        fontFamily: lineRight ? window.getComputedStyle(lineRight).fontFamily : null,
+        fontSize: lineRight ? window.getComputedStyle(lineRight).fontSize : null,
+        color: lineRight ? window.getComputedStyle(lineRight).color : null,
+        fontStyle: lineRight ? window.getComputedStyle(lineRight).fontStyle : null,
+        left: rRect ? rRect.left : null,
+        right: rRect ? rRect.right : null,
+        width: rRect ? rRect.width : null
+      },
+      subline: {
+        text: subline ? subline.textContent : null,
+        fontSize: subline ? window.getComputedStyle(subline).fontSize : null,
+        top: sRect ? sRect.top : null
+      },
+      fgCanvas: {
+        display: fgCanvas ? window.getComputedStyle(fgCanvas).display : null,
+        zIndex: fgCanvas ? window.getComputedStyle(fgCanvas).zIndex : null
+      }
+    };
+  });
 
   await browser.close();
 
   const report = {
     fps: {
-      state1: state1Fps,
-      beanRainWithText: beanRainFps,
-      beanRainFurtherDown: beanRainFurtherFps
+      explodedView: explodedFps,
+      beanRainHalfway: beanRainHalfwayFps,
+      beanRainFullest: beanRainFullestFps
     },
     screenshots: {
-      state1: state1Path,
-      beanRainWithText: beanRainPath,
-      beanRainFurtherDown: beanRainFurtherPath
+      explodedView: explodedPath,
+      beanRainHalfway: beanRainHalfwayPath,
+      beanRainFullest: beanRainFullestPath
     },
+    domInspection,
     consoleErrors,
     consoleMessages
   };
