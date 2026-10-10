@@ -364,7 +364,7 @@ export class EmberScroll {
       }
     });
 
-    // Subline fade in at 0.25, and fade out before cup rises at 0.72
+    // Subline fades in smoothly and remains visible through the complete ring at the end of the section
     beanRainTl.fromTo('.bean-rain-subline', {
       opacity: 0,
       y: 20
@@ -372,14 +372,14 @@ export class EmberScroll {
       opacity: 1,
       y: 0,
       ease: 'power2.out',
-      duration: 0.25
-    }, 0.25)
+      duration: 0.20
+    }, 0.20)
     .to('.bean-rain-subline', {
       opacity: 0,
-      y: -15,
+      y: -10,
       ease: 'power2.in',
-      duration: 0.15
-    }, 0.72);
+      duration: 0.04
+    }, 0.96);
   }
 
   setupMobileTimelines() {

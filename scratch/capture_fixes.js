@@ -36,16 +36,23 @@ async function run() {
     consoleErrors.push(err.toString());
   });
 
-  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bust30...');
-  await page.goto('http://localhost:3000/?cache=bust30', { waitUntil: 'networkidle0', timeout: 30000 });
+  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bustStage2AFinal3...');
+  await page.goto('http://localhost:3000/?cache=bustStage2AFinal3', { waitUntil: 'networkidle0', timeout: 30000 });
 
-  // Function to measure FPS over 60 frames
+  // Function to measure FPS over 60 frames after 10-frame warmup
   async function measureFps() {
     return await page.evaluate(() => {
       return new Promise(resolve => {
+        let warmup = 10;
         let frameCount = 0;
-        let startTime = performance.now();
+        let startTime = 0;
         function loop() {
+          if (warmup > 0) {
+            warmup--;
+            if (warmup === 0) startTime = performance.now();
+            requestAnimationFrame(loop);
+            return;
+          }
           frameCount++;
           if (frameCount >= 60) {
             let endTime = performance.now();
@@ -86,7 +93,7 @@ async function run() {
 
   // --- PART A: 1920x1080 CAPTURES ---
 
-  // (c1) Exploded View at full separation at 1920x1080 (progress ~0.70 where lines are drawn)
+  // (c1) Exploded View at full separation at 1920x1080 (progress ~0.68)
   console.log('Scrolling to Exploded View at full separation (1920x1080)...');
   await scrollToSectionProgress('exploded', 0.68);
   await new Promise(r => setTimeout(r, 1600));
@@ -134,23 +141,23 @@ async function run() {
     };
   });
 
-  // (b) Bean Rain halfway at 1920x1080 (progress 0.50)
+  // (b) Bean Rain halfway at 1920x1080 (progress 0.50: falling scattered rain)
   console.log('Scrolling to Bean Rain halfway (1920x1080)...');
   await scrollToSectionProgress('bean-rain', 0.50);
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise(r => setTimeout(r, 1400));
   const beanRainHalfwayFps = await measureFps();
   const beanRainHalfwayPath = path.join(artifactDir, 'bean_rain_halfway.png');
   await page.screenshot({ path: beanRainHalfwayPath });
   console.log(`Bean Rain halfway captured: ${beanRainHalfwayFps} FPS -> ${beanRainHalfwayPath}`);
 
-  // (a) Bean Rain at its fullest at 1920x1080 (progress 0.70)
-  console.log('Scrolling to Bean Rain at its fullest (1920x1080)...');
-  await scrollToSectionProgress('bean-rain', 0.70);
-  await new Promise(r => setTimeout(r, 1200));
-  const beanRainFullestFps = await measureFps();
-  const beanRainFullestPath = path.join(artifactDir, 'bean_rain_fullest.png');
-  await page.screenshot({ path: beanRainFullestPath });
-  console.log(`Bean Rain at fullest captured: ${beanRainFullestFps} FPS -> ${beanRainFullestPath}`);
+  // (a) Bean Rain at its end (progress 0.96: complete stable ring)
+  console.log('Scrolling to Bean Rain at its end (the ring) (1920x1080)...');
+  await scrollToSectionProgress('bean-rain', 0.96);
+  await new Promise(r => setTimeout(r, 1400));
+  const beanRainEndFps = await measureFps();
+  const beanRainEndPath = path.join(artifactDir, 'bean_rain_ring_end.png');
+  await page.screenshot({ path: beanRainEndPath });
+  console.log(`Bean Rain at its end (the ring) captured: ${beanRainEndFps} FPS -> ${beanRainEndPath}`);
 
   // Inspect Bean Rain headline skew at rest and subline
   const beanRainInspection = await page.evaluate(() => {
@@ -215,13 +222,13 @@ async function run() {
       exploded1080: exploded1080Fps,
       exploded768: exploded768Fps,
       beanRainHalfway: beanRainHalfwayFps,
-      beanRainFullest: beanRainFullestFps
+      beanRainEnd: beanRainEndFps
     },
     screenshots: {
       exploded1080: exploded1080Path,
       exploded768: exploded768Path,
       beanRainHalfway: beanRainHalfwayPath,
-      beanRainFullest: beanRainFullestPath
+      beanRainEnd: beanRainEndPath
     },
     explodedInspection1080,
     explodedInspection768,

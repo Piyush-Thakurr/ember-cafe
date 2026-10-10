@@ -212,18 +212,18 @@
 
 /* Label Positions (Kept fully inside viewport with >=5vw / >=48px margins) */
 #label-origin {
-  top: 33%;
+  top: 29%;
   left: max(48px, 5vw);
 }
 
 #label-roast {
-  top: 41%;
+  top: 37%;
   right: max(48px, 5vw);
   text-align: right;
 }
 
 #label-notes {
-  top: 55%;
+  top: 50%;
   left: max(48px, 5vw);
 }
 
@@ -324,19 +324,19 @@
 
 .bean-rain-subline {
   position: absolute;
-  top: calc(50vh + 24vh + 64px);
+  top: calc(52vh + 24vh + 64px);
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-body);
   font-style: italic;
-  font-size: clamp(22px, 2.4vw, 28px);
+  font-size: 24px;
   color: rgba(241, 230, 211, 0.90);
   letter-spacing: 0.05em;
   text-align: center;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  z-index: 12;
+  z-index: 30;
 }
 
 /* Reduced Motion Override */
