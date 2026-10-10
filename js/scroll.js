@@ -336,13 +336,16 @@ export class EmberScroll {
     // 4. Bean Rain (State 3: 400 beans spiral into clean ring, solid headlines, rest-zero skew)
     // ----------------------------------------------------
     gsap.set('.bean-rain-headline-wrap', { skewY: 0, rotation: 0 });
+    gsap.set('.line-left', { xPercent: -70, opacity: 0 });
+    gsap.set('.line-right', { xPercent: 70, opacity: 0 });
+    gsap.set('.bean-rain-subline', { opacity: 0, y: 24 });
 
     let skewDebounce;
     const beanRainTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#bean-rain',
         start: 'top top',
-        end: '+=160%',
+        end: '+=180%',
         pin: true,
         scrub: 0.8,
         anticipatePin: 1,
@@ -385,22 +388,44 @@ export class EmberScroll {
       }
     });
 
-    // Subline fades in smoothly and remains visible through the complete ring at the end of the section
-    beanRainTl.fromTo('.bean-rain-subline', {
-      opacity: 0,
-      y: 20
-    }, {
+    // Headline enters as beans start gathering into the ring (0.38 to 0.54)
+    beanRainTl.to('.line-left', {
+      xPercent: 0,
+      opacity: 1,
+      ease: 'power2.out',
+      duration: 0.16
+    }, 0.38)
+    .to('.line-right', {
+      xPercent: 0,
+      opacity: 1,
+      ease: 'power2.out',
+      duration: 0.16
+    }, 0.42)
+    .to('.bean-rain-subline', {
       opacity: 1,
       y: 0,
       ease: 'power2.out',
-      duration: 0.20
-    }, 0.20)
-    .to('.bean-rain-subline', {
+      duration: 0.14
+    }, 0.48)
+    // Headline exits upward with stagger as ring contracts and pours into menu vessel (0.78 to 0.89)
+    .to('.line-left', {
+      yPercent: -100,
       opacity: 0,
-      y: -10,
       ease: 'power2.in',
-      duration: 0.04
-    }, 0.96);
+      duration: 0.08
+    }, 0.78)
+    .to('.line-right', {
+      yPercent: -100,
+      opacity: 0,
+      ease: 'power2.in',
+      duration: 0.08
+    }, 0.81)
+    .to('.bean-rain-subline', {
+      yPercent: -100,
+      opacity: 0,
+      ease: 'power2.in',
+      duration: 0.06
+    }, 0.80);
     // ----------------------------------------------------
     // 5. Menu ("The Signature Five")
     // Horizontal strip of 5 tall cards inside left ~65%

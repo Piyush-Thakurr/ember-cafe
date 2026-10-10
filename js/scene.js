@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+window.THREE = THREE;
 import gsap from 'gsap';
 
 /**
@@ -99,6 +100,7 @@ export class EmberScene {
     this.renderer.toneMappingExposure = 1.15;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setClearColor(0x000000, 0);
 
     // 2. Scene & Camera
     this.scene = new THREE.Scene();
@@ -125,6 +127,7 @@ export class EmberScene {
       this.fgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
       this.fgRenderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.fgRenderer.toneMappingExposure = 1.35;
+      this.fgRenderer.setClearColor(0x000000, 0);
 
       this.sceneFg = new THREE.Scene();
 
@@ -203,6 +206,38 @@ export class EmberScene {
     this.scene.add(this.beanRainKey);
   }
 
+  setupDissolveMaterial(mat) {
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uDissolve = { value: 0.0 };
+      mat.userData.shader = shader;
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vWorldPos;\n'
+      ).replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;\n'
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        '#include <common>\nuniform float uDissolve;\nvarying vec3 vWorldPos;\n'
+      ).replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+        if (uDissolve > 0.001) {
+          float n = sin(vWorldPos.x * 12.0 + vWorldPos.y * 14.0) * cos(vWorldPos.y * 12.0 + vWorldPos.z * 16.0);
+          n = fract(n * 43.758 + vWorldPos.y * 8.5);
+          if (n < uDissolve) discard;
+          float edge = smoothstep(uDissolve, uDissolve + 0.09, n);
+          if (edge < 1.0) {
+            vec3 ember = vec3(1.0, 0.38, 0.12);
+            gl_FragColor.rgb = mix(ember * 4.0, gl_FragColor.rgb, edge);
+          }
+        }
+        `
+      );
+    };
+  }
+
   createCupAndSaucer() {
     this.cupGroup = new THREE.Group();
     this.cupGroup.position.set(0, -1.14, 0);
@@ -215,6 +250,7 @@ export class EmberScene {
       roughness: 0.45,
       metalness: 0.10
     });
+    this.setupDissolveMaterial(this.cupGlazeMaterial);
 
     // Saucer slightly lighter (#44342A) with softer roughness
     this.saucerGlazeMaterial = new THREE.MeshStandardMaterial({
@@ -222,6 +258,7 @@ export class EmberScene {
       roughness: 0.38,
       metalness: 0.12
     });
+    this.setupDissolveMaterial(this.saucerGlazeMaterial);
 
     // 1. Procedural Cup Profile
     const cupPoints = [];
@@ -330,6 +367,7 @@ export class EmberScene {
       uniform vec3 uColor;
       uniform float uRipple;
       uniform float uShockwave;
+      uniform float uDissolve;
       varying vec2 vUv;
       varying vec3 vWorldPosition;
 
@@ -365,6 +403,18 @@ export class EmberScene {
         float spec = pow(max(dot(normal, halfDir), 0.0), 32.0) * 0.38;
         crema += spec * vec3(1.0, 0.94, 0.86);
 
+        if (uDissolve > 0.001) {
+          float n = (sin(vUv.x * 24.0) * cos(vUv.y * 24.0) + 1.0) * 0.5;
+          float hash = fract(sin(dot(vUv * 16.0, vec2(12.9898, 78.233))) * 43758.5453);
+          n = mix(n, hash, 0.30);
+          if (n < uDissolve) discard;
+          float edge = smoothstep(uDissolve, uDissolve + 0.08, n);
+          if (edge < 1.0) {
+            vec3 ember = vec3(0.88, 0.33, 0.12);
+            crema = mix(ember * 3.0, crema, edge);
+          }
+        }
+
         gl_FragColor = vec4(crema, 1.0);
       }
     `;
@@ -378,7 +428,8 @@ export class EmberScene {
         uColorEdge: { value: new THREE.Color(0x8a5a35) },
         uColor: { value: new THREE.Color(0x2a1208) },
         uRipple: { value: 0.0 },
-        uShockwave: { value: 0.0 }
+        uShockwave: { value: 0.0 },
+        uDissolve: { value: 0.0 }
       }
     });
 
@@ -412,6 +463,7 @@ export class EmberScene {
       }
     `;
     const coffeeFragmentShader = `
+      uniform float uDissolve;
       varying vec2 vUv;
       void main() {
         vec2 uv = vUv - vec2(0.5);
@@ -428,14 +480,30 @@ export class EmberScene {
         float spec = pow(max(dot(vec3(0.0, 1.0, 0.0), halfDir), 0.0), 36.0) * 0.42;
         col += spec * vec3(1.0, 0.94, 0.85);
 
+        if (uDissolve > 0.001) {
+          float n = (sin(vUv.x * 24.0) * cos(vUv.y * 24.0) + 1.0) * 0.5;
+          float hash = fract(sin(dot(vUv * 16.0, vec2(12.9898, 78.233))) * 43758.5453);
+          n = mix(n, hash, 0.30);
+          if (n < uDissolve) discard;
+          float edge = smoothstep(uDissolve, uDissolve + 0.08, n);
+          if (edge < 1.0) {
+            vec3 ember = vec3(0.88, 0.33, 0.12);
+            col = mix(ember * 3.0, col, edge);
+          }
+        }
+
         gl_FragColor = vec4(col, 1.0);
       }
     `;
     const coffeeMat = new THREE.ShaderMaterial({
       vertexShader: coffeeVertexShader,
       fragmentShader: coffeeFragmentShader,
+      uniforms: {
+        uDissolve: { value: 0.0 }
+      },
       side: THREE.DoubleSide
     });
+    this.coffeeMaterial = coffeeMat;
     const coffeeCircle = new THREE.Mesh(coffeeCircleGeo, coffeeMat);
     this.coffeeMesh.add(coffeeCircle);
 
@@ -463,6 +531,8 @@ export class EmberScene {
       roughness: 0.28,
       metalness: 0.88
     });
+    this.setupDissolveMaterial(spoonMat);
+    this.spoonMaterial = spoonMat;
 
     // 40% thicker handle (radius 0.065 to 0.095, length 1.45)
     const spoonHandleGeo = new THREE.CylinderGeometry(0.065, 0.095, 1.45, 16);
@@ -483,6 +553,31 @@ export class EmberScene {
     this.spoonMesh.position.set(0, 0.55, 0);
     this.spoonMesh.visible = false;
     this.cupGroup.add(this.spoonMesh);
+  }
+
+  setLayersDissolve(val) {
+    const d = THREE.MathUtils.clamp(val, 0.0, 1.0);
+    if (this.cupGlazeMaterial?.userData?.shader?.uniforms?.uDissolve) {
+      this.cupGlazeMaterial.userData.shader.uniforms.uDissolve.value = d;
+    }
+    if (this.saucerGlazeMaterial?.userData?.shader?.uniforms?.uDissolve) {
+      this.saucerGlazeMaterial.userData.shader.uniforms.uDissolve.value = d;
+    }
+    if (this.spoonMaterial?.userData?.shader?.uniforms?.uDissolve) {
+      this.spoonMaterial.userData.shader.uniforms.uDissolve.value = d;
+    }
+    if (this.cremaDiscMaterial?.uniforms?.uDissolve) {
+      this.cremaDiscMaterial.uniforms.uDissolve.value = d;
+    }
+    if (this.coffeeMaterial?.uniforms?.uDissolve) {
+      this.coffeeMaterial.uniforms.uDissolve.value = d;
+    }
+    if (this.saucerRimHighlight) {
+      this.saucerRimHighlight.visible = d < 0.35;
+    }
+    if (this.contactShadowMesh) {
+      this.contactShadowMesh.material.opacity = (1.0 - d) * 0.55;
+    }
   }
 
   createSteam() {
@@ -687,6 +782,50 @@ export class EmberScene {
         ? (0.10 + layer * 0.02) 
         : (isFrontArc ? (-0.08 - layer * 0.03) : (-0.12 - layer * 0.05 + baseTiltZ * 0.5));
 
+      // Phase 3: Spawn position on the 5 separating exploded layer surfaces
+      const layerIdx = i % 5;
+      let localX = 0, localY = 0, localZ = 0;
+      if (layerIdx === 0) {
+        // Spoon
+        const theta = (i / 400) * Math.PI * 2;
+        localX = 0.05 + Math.cos(theta) * 0.22;
+        localY = 1.86 + Math.sin(theta) * 0.12;
+        localZ = ((i % 7) - 3) * 0.02;
+      } else if (layerIdx === 1) {
+        // Crema disc
+        const r = Math.sqrt((i % 80) / 80) * 0.98;
+        const theta = (i * 2.39996) % (Math.PI * 2);
+        localX = Math.cos(theta) * r;
+        localY = 1.34;
+        localZ = Math.sin(theta) * r * 0.35;
+      } else if (layerIdx === 2) {
+        // Coffee disc
+        const r = Math.sqrt((i % 80) / 80) * 0.92;
+        const theta = (i * 2.39996) % (Math.PI * 2);
+        localX = Math.cos(theta) * r;
+        localY = 0.82;
+        localZ = Math.sin(theta) * r * 0.35;
+      } else if (layerIdx === 3) {
+        // Cup body
+        const h = ((i % 80) / 80);
+        const r = 0.65 + h * 0.40;
+        const theta = (i * 2.39996) % (Math.PI * 2);
+        localX = Math.cos(theta) * r;
+        localY = -0.55 + h * 0.50;
+        localZ = Math.sin(theta) * r * 0.35;
+      } else {
+        // Saucer
+        const r = 0.60 + Math.sqrt((i % 80) / 80) * 1.35;
+        const theta = (i * 2.39996) % (Math.PI * 2);
+        localX = Math.cos(theta) * r;
+        localY = -1.38;
+        localZ = Math.sin(theta) * r * 0.35;
+      }
+      const spawnX = localX * 0.58;
+      const spawnY = -0.06 + (localY * Math.cos(0.245) - localZ * Math.sin(0.245)) * 0.58;
+      const spawnZ = (localY * Math.sin(0.245) + localZ * Math.cos(0.245)) * 0.58;
+      const spawnPos = new THREE.Vector3(spawnX, spawnY, spawnZ);
+
       this.beanInitialData.push({
         origPos: new THREE.Vector3(x, y, z),
         origRot: rot,
@@ -697,7 +836,8 @@ export class EmberScene {
         ringAngle: ringAngle,
         targetRingRadius: targetRingRadius,
         targetZ: targetZ,
-        isForeground: isForeground
+        isForeground: isForeground,
+        spawnPos: spawnPos
       });
 
       // Simulation Data for Hero:
@@ -1280,6 +1420,7 @@ export class EmberScene {
   // Excludes 60px margin around subline.
   setBeanRainScrub(progress) {
     this.scrub.sectionMode = 'bean-rain';
+    this.scrub.explodedProgress = 0.0;
     if (this.processGroup) this.processGroup.visible = false;
     if (this.beanMesh) this.beanMesh.visible = true;
     this.scrub.beanRainProgress = progress;
@@ -1287,19 +1428,33 @@ export class EmberScene {
       this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
       if (this.steamParticles) this.steamParticles.visible = false;
     }
-    if (this.foamMesh) this.foamMesh.visible = false;
-    if (this.coffeeMesh) this.coffeeMesh.visible = false;
+    const inDissolve = progress < 0.25;
+    if (this.foamMesh) this.foamMesh.visible = inDissolve;
+    if (this.coffeeMesh) this.coffeeMesh.visible = inDissolve;
+    if (this.spoonMesh) this.spoonMesh.visible = inDissolve;
+    if (this.liquidMesh) this.liquidMesh.visible = false;
+    if (this.cupMesh) {
+      this.cupMesh.visible = inDissolve;
+      this.cupMesh.position.y = -0.30;
+    }
+    if (this.saucerMesh) {
+      this.saucerMesh.visible = inDissolve;
+      this.saucerMesh.position.y = -1.38;
+    }
+    if (this.coffeeMesh) this.coffeeMesh.position.y = 0.82;
+    if (this.foamMesh) this.foamMesh.position.y = 1.34;
+    if (this.spoonMesh) this.spoonMesh.position.y = 1.86;
 
-    // Show/hide foreground canvas (rendered only while bean rain is in view)
+    // Show/hide foreground canvas (rendered only while front-arc beans pass in front of text)
     if (this.fgCanvas) {
-      this.fgCanvas.style.display = progress > 0.01 ? 'block' : 'none';
+      this.fgCanvas.style.display = (progress >= 0.45 && progress <= 0.85) ? 'block' : 'none';
     }
 
     // Light the beans in this section: ember rim (#E0541F), crema key (#F1E6D3), tone-mapping exposure +20%
-    if (this.beanRainRim) this.beanRainRim.intensity = Math.min(progress * 4.0, 3.4);
-    if (this.beanRainKey) this.beanRainKey.intensity = Math.min(progress * 4.2, 3.8);
-    this.renderer.toneMappingExposure = 1.15 * (1.0 + Math.min(progress * 0.25, 0.20));
-    if (this.fgRenderer) this.fgRenderer.toneMappingExposure = 1.15 * (1.0 + Math.min(progress * 0.25, 0.20));
+    if (this.beanRainRim) this.beanRainRim.intensity = 3.4;
+    if (this.beanRainKey) this.beanRainKey.intensity = 3.8;
+    this.renderer.toneMappingExposure = 1.38;
+    if (this.fgRenderer) this.fgRenderer.toneMappingExposure = 1.38;
 
     if (!this.beanMesh || !this.beanInitialData.length) return;
 
@@ -1311,29 +1466,31 @@ export class EmberScene {
       this.beanMeshFg.rotation.set(0, 0, 0);
     }
 
-    // Camera transitions smoothly to level (centered at 50vh, looking at (0,0,0))
-    this.scrub.cameraY = 0.0;
-    this.scrub.cameraLookY = 0.0;
+    // Camera transitions smoothly from exploded 3/4 angle to level ring angle
+    const camT = Math.min(progress / 0.25, 1.0);
+    this.scrub.cameraY = THREE.MathUtils.lerp(0.40, 0.0, camT);
+    this.scrub.cameraLookY = THREE.MathUtils.lerp(-0.10, 0.0, camT);
     this.scrub.cameraZ = 6.1;
-    this.camera.position.set(0, 0, 6.1);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.set(0, this.scrub.cameraY, 6.1);
+    this.camera.lookAt(0, this.scrub.cameraLookY, 0);
 
-    // Smooth continuous transition from exploded view into bean vortex (no hard cut or blank frame)
-    if (progress < 0.22) {
-      const fade = 1.0 - (progress / 0.22);
-      this.scrub.heroScale = 0.58 * fade;
-      this.scrub.cupPosY = -0.06 - (1.0 - fade) * 1.5;
+    // Continuous transition from exploded view:
+    // Layers dissolve with noise-threshold glowing ember edge across progress 0.0 to 0.25
+    if (inDissolve) {
+      const dissolve = Math.min(progress / 0.22, 1.0);
+      this.setLayersDissolve(dissolve);
+      this.scrub.heroScale = 0.58;
+      this.scrub.cupPosY = -0.06;
       if (this.cupGroup) {
-        this.cupGroup.scale.set(this.scrub.heroScale, this.scrub.heroScale, this.scrub.heroScale);
-        this.cupGroup.position.set(0, this.scrub.cupPosY, 0);
-        this.cupGroup.visible = fade > 0.01;
+        this.cupGroup.scale.set(0.58, 0.58, 0.58);
+        this.cupGroup.position.set(0, -0.06, 0);
+        this.cupGroup.rotation.set(0.245, 0, 0);
+        this.cupGroup.visible = true;
       }
     } else {
-      this.scrub.heroScale = 0.0;
-      this.scrub.cupPosY = -5.0;
-      if (this.cupGroup) {
-        this.cupGroup.scale.set(0, 0, 0);
+      if (this.cupGroup && this.cupGroup.visible) {
         this.cupGroup.visible = false;
+        this.setLayersDissolve(0.0);
       }
     }
 
@@ -1351,27 +1508,36 @@ export class EmberScene {
 
     const ringCenterY = -0.08; // Mathematically 52% of viewport height at FOV 36, Z 6.1
 
-    if (progress <= 0.50) {
+    if (progress <= 0.45) {
       // -------------------------------------------------------------------
-      // FIRST HALF: RAIN (beans scattered and falling downwards along Y)
+      // PHASE 1: DISSOLVE & BEAN SPAWN INTO RAIN (0.0 to 0.45)
+      // Beans spawn from layer surfaces and fly into falling rain scatter
       // -------------------------------------------------------------------
-      const pRain = progress / 0.50; // 0.0 to 1.0
+      const pRain = progress / 0.45;
 
       for (let i = 0; i < count; i++) {
         const b = this.beanInitialData[i];
+        const spawnStagger = (i / 400) * 0.10;
+        const tSpawn = THREE.MathUtils.clamp((progress - spawnStagger) / 0.30, 0.0, 1.0);
+        const eSpawn = 1.0 - Math.pow(1.0 - tSpawn, 2.0); // ease-out
 
-        let curX = b.origPos.x + Math.sin(pRain * 2.5 + i) * 0.12;
-        let curY = b.origPos.y - pRain * b.fallDist;
-        let curZ = b.origPos.z;
+        let rainX = b.origPos.x + Math.sin(pRain * 2.5 + i) * 0.12;
+        let rainY = b.origPos.y - pRain * b.fallDist;
+        let rainZ = b.origPos.z;
 
         // Keep falling beans away from subline (exclude 60px margin): |X| < 1.35 and Y in [-1.55, -1.08]
-        if (Math.abs(curX) < 1.35 && curY > -1.55 && curY < -1.08) {
-          curX += (curX >= 0 ? 1.45 : -1.45);
+        if (Math.abs(rainX) < 1.35 && rainY > -1.55 && rainY < -1.08) {
+          rainX += (rainX >= 0 ? 1.45 : -1.45);
         }
 
-        const rotX = b.origRot.x + pRain * Math.PI * 2.8;
-        const rotY = b.origRot.y + pRain * Math.PI * 2.2;
-        const beanScale = Math.min(b.origScale, 0.44);
+        const spawnPos = b.spawnPos || b.origPos;
+        let curX = THREE.MathUtils.lerp(spawnPos.x, rainX, eSpawn);
+        let curY = THREE.MathUtils.lerp(spawnPos.y, rainY, eSpawn);
+        let curZ = THREE.MathUtils.lerp(spawnPos.z, rainZ, eSpawn);
+
+        const rotX = b.origRot.x + progress * Math.PI * 4.0;
+        const rotY = b.origRot.y + progress * Math.PI * 3.5;
+        const beanScale = THREE.MathUtils.lerp(0.28, Math.min(b.origScale, 0.44), eSpawn);
 
         tempVec.set(curX, curY, curZ);
         dummy.position.copy(tempVec);
@@ -1379,44 +1545,46 @@ export class EmberScene {
         dummy.scale.set(beanScale, beanScale, beanScale);
         dummy.updateMatrix();
 
-        // During rain phase, beans render on background canvas
+        // During spawn & rain phase, beans render on background canvas
         this.beanMesh.setMatrixAt(i, dummy.matrix);
         if (this.beanMeshFg) {
           this.beanMeshFg.setMatrixAt(i, zeroDummy.matrix);
         }
       }
-    } else {
+    } else if (progress <= 0.85) {
       // -------------------------------------------------------------------
-      // SECOND HALF: SPIRAL INWARDS INTO ONE CLEAN RING (24vh radius, 52% height)
-      // Complete and stable at the end of the section (progress >= 0.92)
+      // PHASE 2: RAIN -> CLEAN RING GATHER (0.45 to 0.85)
+      // Per-bean stagger & smoothstep ease into 24vh circular ring at 52% height
       // -------------------------------------------------------------------
-      const t = (progress - 0.50) / 0.50; // 0.0 to 1.0
-      // Complete and stable at the end of the section
-      const e = THREE.MathUtils.smoothstep(t, 0.0, 0.84); // Reaches 1.0 at t=0.84 (progress=0.92)
-
-      const spiralTurns = 2.0;
-
       for (let i = 0; i < count; i++) {
         const b = this.beanInitialData[i];
 
-        // Rain end position at p = 0.50
-        const rainEndX = b.origPos.x + Math.sin(2.5 + i) * 0.12;
-        const rainEndY = b.origPos.y - b.fallDist;
-        const rainEndZ = b.origPos.z;
+        // Rain end position at p = 0.45
+        let rainEndX = b.origPos.x + Math.sin(2.5 + i) * 0.12;
+        let rainEndY = b.origPos.y - b.fallDist;
+        let rainEndZ = b.origPos.z;
+        if (Math.abs(rainEndX) < 1.35 && rainEndY > -1.55 && rainEndY < -1.08) {
+          rainEndX += (rainEndX >= 0 ? 1.45 : -1.45);
+        }
+
+        // Per-bean stagger into spiral ring
+        const stagger = ((i % 100) / 100) * 0.16;
+        const tGather = THREE.MathUtils.clamp((progress - 0.45 - stagger) / 0.20, 0.0, 1.0);
+        const eGather = THREE.MathUtils.smoothstep(tGather, 0.0, 1.0);
 
         // Ring target position: ONE clean true circle of radius 24vh, centered at (0, -0.08)
-        const currentAngle = b.ringAngle + (1.0 - e) * spiralTurns * Math.PI;
+        const spiralTurns = 1.8;
+        const currentAngle = b.ringAngle + (1.0 - eGather) * spiralTurns * Math.PI;
         const targetX = Math.cos(currentAngle) * b.targetRingRadius;
         const targetY = ringCenterY + Math.sin(currentAngle) * b.targetRingRadius;
         const targetZ = b.targetZ;
 
-        // Smooth transition from rain position to clean ring position
-        const curX = THREE.MathUtils.lerp(rainEndX, targetX, e);
-        const curY = THREE.MathUtils.lerp(rainEndY, targetY, e);
-        const curZ = THREE.MathUtils.lerp(rainEndZ, targetZ, e);
+        const curX = THREE.MathUtils.lerp(rainEndX, targetX, eGather);
+        const curY = THREE.MathUtils.lerp(rainEndY, targetY, eGather);
+        const curZ = THREE.MathUtils.lerp(rainEndZ, targetZ, eGather);
 
-        const rotX = b.origRot.x + (1.0 + e) * Math.PI * 2.0;
-        const rotY = b.origRot.y + (1.0 + e) * Math.PI * 2.4;
+        const rotX = b.origRot.x + (1.0 + eGather) * Math.PI * 2.0;
+        const rotY = b.origRot.y + (1.0 + eGather) * Math.PI * 2.4;
         const beanScale = Math.min(b.origScale, 0.44);
 
         tempVec.set(curX, curY, curZ);
@@ -1426,12 +1594,63 @@ export class EmberScene {
         dummy.updateMatrix();
 
         // Foreground vs background depth split:
-        // Front arc is much sparser than back arc (only b.isForeground beans render in foreground canvas)
-        // All letters of "400 BEANS." and "ONE CUP." stay >= 70% (in fact > 90%) visible!
-        if (this.beanMeshFg && b.isForeground && e > 0.15) {
+        // Front arc is much sparser than back arc so all letters stay >= 70% visible
+        if (this.beanMeshFg && b.isForeground && eGather > 0.15) {
           this.beanMeshFg.setMatrixAt(i, dummy.matrix);
           this.beanMesh.setMatrixAt(i, zeroDummy.matrix);
         } else {
+          this.beanMesh.setMatrixAt(i, dummy.matrix);
+          if (this.beanMeshFg) {
+            this.beanMeshFg.setMatrixAt(i, zeroDummy.matrix);
+          }
+        }
+      }
+    } else {
+      // -------------------------------------------------------------------
+      // PHASE 3: RING EXIT -> POUR INTO MENU VESSEL (0.85 to 1.0)
+      // Ring contracts to center and beans pour into vessel on the right side
+      // -------------------------------------------------------------------
+      for (let i = 0; i < count; i++) {
+        const b = this.beanInitialData[i];
+        const staggerExit = (i / 400) * 0.06;
+        const tExit = THREE.MathUtils.clamp((progress - 0.85 - staggerExit) / 0.085, 0.0, 1.0);
+        const eExit = tExit * tExit; // accelerate into pour stream
+
+        // Base stable ring position
+        const ringX = Math.cos(b.ringAngle) * b.targetRingRadius;
+        const ringY = ringCenterY + Math.sin(b.ringAngle) * b.targetRingRadius;
+
+        // Contract factor toward center (0, -0.08)
+        const contract = 1.0 - eExit * 0.70;
+        const cRingX = ringX * contract;
+        const cRingY = ringCenterY + (ringY - ringCenterY) * contract;
+
+        // Target pour location into menu vessel on the right
+        const pourTargetX = 1.55 + Math.sin(i * 3.7) * 0.08;
+        const pourTargetY = -0.18 + Math.cos(i * 2.3) * 0.08 - eExit * 0.45;
+        const pourTargetZ = ((i % 5) - 2) * 0.04;
+
+        const curX = THREE.MathUtils.lerp(cRingX, pourTargetX, eExit);
+        const curY = THREE.MathUtils.lerp(cRingY, pourTargetY, eExit);
+        const curZ = THREE.MathUtils.lerp(b.targetZ, pourTargetZ, eExit);
+
+        const rotX = b.origRot.x + (2.0 + eExit * 4.0) * Math.PI;
+        const rotY = b.origRot.y + (2.4 + eExit * 4.0) * Math.PI;
+
+        const shrink = 1.0 - THREE.MathUtils.smoothstep(tExit, 0.35, 1.0);
+        const beanScale = Math.min(b.origScale, 0.44) * shrink;
+
+        if (beanScale < 0.005) {
+          this.beanMesh.setMatrixAt(i, zeroDummy.matrix);
+          if (this.beanMeshFg) this.beanMeshFg.setMatrixAt(i, zeroDummy.matrix);
+        } else {
+          tempVec.set(curX, curY, curZ);
+          dummy.position.copy(tempVec);
+          dummy.rotation.set(rotX, rotY, b.origRot.z);
+          dummy.scale.set(beanScale, beanScale, beanScale);
+          dummy.updateMatrix();
+
+          // During pour, all beans funnel in background canvas
           this.beanMesh.setMatrixAt(i, dummy.matrix);
           if (this.beanMeshFg) {
             this.beanMeshFg.setMatrixAt(i, zeroDummy.matrix);
@@ -1720,7 +1939,7 @@ export class EmberScene {
         const currentScale = this.scrub.heroScale;
         this.cupGroup.scale.set(currentScale, currentScale, currentScale);
 
-        if (this.scrub.explodedProgress > 0.005) {
+        if (this.scrub.sectionMode === 'exploded' && this.scrub.explodedProgress > 0.005) {
           // Exploded view: camera slowly orbits +-8 degrees, layers slowly turn
           const orbitAngle = Math.sin(elapsedTime * 0.45) * 0.14; // +-8 deg
           this.cupGroup.rotation.set(this.scrub.heroTiltX, 0, this.scrub.heroTiltZ);
@@ -1733,7 +1952,7 @@ export class EmberScene {
           if (this.coffeeMesh) this.coffeeMesh.rotation.y = elapsedTime * 0.16;
           if (this.cupMesh) this.cupMesh.rotation.y = elapsedTime * -0.09;
           if (this.saucerMesh) this.saucerMesh.rotation.y = elapsedTime * 0.07;
-        } else {
+        } else if (this.scrub.sectionMode === 'hero' || this.scrub.sectionMode === 'dive') {
           // Hero / Dive float & roll
           const isHero = this.scrub.sectionMode === 'hero';
           const verticalBob = isHero ? Math.sin(elapsedTime * 1.6) * 0.038 : 0;
@@ -1921,9 +2140,9 @@ export class EmberScene {
       this.renderer.clear();
     }
 
-    // Render foreground beans layer only when foreground beans are active (progress > 0.50)
+    // Render foreground beans layer only when foreground beans are active (progress 0.45 to 0.85)
     if (this.fgRenderer && this.sceneFg) {
-      if (this.scrub.beanRainProgress > 0.50 && this.scrub.sectionMode === 'bean-rain') {
+      if (this.scrub.beanRainProgress >= 0.45 && this.scrub.beanRainProgress <= 0.85 && this.scrub.sectionMode === 'bean-rain') {
         this.fgRenderer.render(this.sceneFg, this.camera);
       } else {
         this.fgRenderer.clear();
