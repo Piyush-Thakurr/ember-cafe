@@ -51,6 +51,7 @@ export class EmberScene {
     this.processGranulesMesh = null;
     this.processDropletMesh = null;
     this.granulesData = [];
+    this.beanSimData = [];
     this.activeDrinkIndex = 0;
     
     // Scrub States
@@ -503,6 +504,7 @@ export class EmberScene {
 
     const steamVertexShader = `
       uniform float uTime;
+      uniform vec2 uMouse;
       attribute float aLife;
       attribute float aSpeed;
       attribute float aOffset;
@@ -516,8 +518,8 @@ export class EmberScene {
         pos.y = 0.58 + progress * 2.3;
         float curlX = sin(uTime * 0.6 + aOffset) * 0.16 * progress;
         float curlZ = cos(uTime * 0.5 + aOffset * 1.2) * 0.12 * progress;
-        pos.x += curlX;
-        pos.z += curlZ;
+        pos.x += curlX + uMouse.x * 0.35 * progress;
+        pos.z += curlZ + uMouse.y * 0.25 * progress;
 
         float fadeIn = smoothstep(0.0, 0.22, progress);
         float fadeOut = 1.0 - smoothstep(0.40, 0.95, progress);
@@ -548,7 +550,8 @@ export class EmberScene {
       fragmentShader: steamFragmentShader,
       uniforms: {
         uTime: { value: 0.0 },
-        uSteamAlpha: { value: 1.0 }
+        uSteamAlpha: { value: 1.0 },
+        uMouse: { value: new THREE.Vector2(0, 0) }
       },
       transparent: true,
       depthWrite: false,
@@ -609,6 +612,7 @@ export class EmberScene {
     ];
 
     this.beanInitialData = [];
+    this.beanSimData = [];
 
     // Base 24vh ring radius (FOV 36, Z=6.1 -> 100vh = 3.9639 units -> 24vh = 0.951 units)
     const base24vhRadius = 0.951;
@@ -683,6 +687,53 @@ export class EmberScene {
         targetRingRadius: targetRingRadius,
         targetZ: targetZ,
         isForeground: isForeground
+      });
+
+      // Simulation Data for Hero:
+      // ~20 beans slowly orbit around the cup
+      const isOrbit = i < 20;
+      const orbitRadius = 0.88 + (i % 5) * 0.12;
+      const orbitSpeed = 0.35 + (i % 4) * 0.12;
+      const orbitPhase = (i / 20) * Math.PI * 2;
+      const orbitTilt = ((i % 3) - 1) * 0.25;
+
+      let heroX = pseudoX;
+      let heroY = pseudoY;
+      let heroZ = pseudoZ;
+
+      // Keep out of tagline zone: bottom-left 40% width x 25% height: x in [-3.8, -0.6], y in [-2.3, -1.05]
+      if (heroX > -3.8 && heroX < -0.5 && heroY > -2.3 && heroY < -1.05) {
+        heroX += 2.4;
+      }
+      // Keep out of nav zone: top 12%: y > 1.82
+      if (heroY > 1.82) {
+        heroY = 1.65 - (i % 4) * 0.22;
+      }
+
+      this.beanSimData.push({
+        x: heroX,
+        y: heroY,
+        z: heroZ,
+        baseX: heroX,
+        baseY: heroY,
+        baseZ: heroZ,
+        vx: 0,
+        vy: 0,
+        vz: 0,
+        spinX: (Math.random() - 0.5) * 2.2,
+        spinY: (Math.random() - 0.5) * 2.5,
+        spinZ: (Math.random() - 0.5) * 1.8,
+        rotX: Math.random() * Math.PI * 2,
+        rotY: Math.random() * Math.PI * 2,
+        rotZ: Math.random() * Math.PI * 2,
+        scale: scale,
+        isOrbit: isOrbit,
+        orbitRadius: orbitRadius,
+        orbitSpeed: orbitSpeed,
+        orbitPhase: orbitPhase,
+        orbitTilt: orbitTilt,
+        flowOffset: (i * 17.3) % 100,
+        gravityRate: -0.06 - (i % 6) * 0.015
       });
     }
 
@@ -1554,15 +1605,21 @@ export class EmberScene {
           this.camera.position.set(0, this.scrub.cameraY, this.scrub.cameraZ);
           this.camera.lookAt(0, this.scrub.cameraLookY, 0);
         } else {
-          const targetRotX = this.scrub.heroTiltX + this.mouse.y * 0.10;
+          // Hero / Dive float & roll
+          const isHero = this.scrub.sectionMode === 'hero';
+          const verticalBob = isHero ? Math.sin(elapsedTime * 1.6) * 0.038 : 0;
+          const rollBob = isHero ? Math.cos(elapsedTime * 1.4) * 0.018 : 0;
+          const pitchBob = isHero ? Math.sin(elapsedTime * 1.1) * 0.015 : 0;
+
+          const targetRotX = this.scrub.heroTiltX + this.mouse.y * 0.10 + pitchBob;
           const targetRotY = -0.16 + Math.sin(elapsedTime * 0.28) * 0.04 + this.mouse.x * 0.16;
-          const targetRotZ = this.scrub.heroTiltZ;
+          const targetRotZ = this.scrub.heroTiltZ + rollBob;
 
           this.cupGroup.rotation.x += (targetRotX - this.cupGroup.rotation.x) * 0.08;
           this.cupGroup.rotation.y += (targetRotY - this.cupGroup.rotation.y) * 0.08;
           this.cupGroup.rotation.z += (targetRotZ - this.cupGroup.rotation.z) * 0.08;
 
-          this.cupGroup.position.y += (this.scrub.cupPosY - this.cupGroup.position.y) * 0.08;
+          this.cupGroup.position.y += ((this.scrub.cupPosY + verticalBob) - this.cupGroup.position.y) * 0.08;
 
           // Camera dolly lerp
           this.camera.position.z += (this.scrub.cameraZ - this.camera.position.z) * 0.08;
@@ -1586,11 +1643,103 @@ export class EmberScene {
         this.cupGroup.rotation.y += delta * 0.75;
       }
 
-      // Idle bean drift (only when in hero/dive to maintain 60 FPS)
-      if (this.beanMesh && isHeroMode && this.scrub.beanRainProgress < 0.05) {
-        this.beanMesh.position.x += (this.mouse.x * 0.22 - this.beanMesh.position.x) * 0.04;
-        this.beanMesh.position.y += (-this.mouse.y * 0.18 - this.beanMesh.position.y) * 0.04;
-        this.beanMesh.rotation.y = Math.sin(elapsedTime * 0.22) * 0.035;
+      // Lively Hero: Curl-Noise Flow Field, per-bean spin, gravity sway, mouse push & orbit
+      if (this.beanMesh && this.scrub.sectionMode === 'hero' && this.beanSimData && this.beanSimData.length) {
+        const t = elapsedTime;
+        const mouseWorldX = this.mouse.x * 3.6;
+        const mouseWorldY = this.mouse.y * 2.0;
+        const scrollVelocity = this.scrub.scrollVelocity || 0;
+        const scrollSpeedBoost = 1.0 + Math.abs(scrollVelocity) * 2.2;
+        const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+        const totalBeans = this.beanSimData.length;
+
+        for (let i = 0; i < totalBeans; i++) {
+          const b = this.beanSimData[i];
+
+          if (b.isOrbit) {
+            // Orbiting the cup
+            const angle = b.orbitPhase + t * b.orbitSpeed * 0.5;
+            b.x = Math.cos(angle) * b.orbitRadius;
+            b.z = Math.sin(angle) * b.orbitRadius;
+            b.y = this.scrub.cupPosY + 0.35 + Math.sin(angle * 2.0 + b.orbitTilt) * 0.12;
+
+            b.rotX += b.spinX * delta;
+            b.rotY += b.spinY * delta;
+          } else {
+            // Curl-noise flow field (swirling 3D drift)
+            const fx = (Math.sin(b.y * 1.1 + t * 0.35 + b.flowOffset) * 0.18 - Math.cos(b.z * 1.3 - t * 0.28) * 0.14) * scrollSpeedBoost;
+            const fy = (Math.sin(b.z * 1.2 + t * 0.40) * 0.16 - Math.cos(b.x * 1.0 - t * 0.32) * 0.14 + b.gravityRate) * scrollSpeedBoost;
+            const fz = (Math.sin(b.x * 1.4 + t * 0.30) * 0.18 - Math.cos(b.y * 1.1 - t * 0.38) * 0.12) * scrollSpeedBoost;
+
+            b.vx += (fx - b.vx) * 0.08;
+            b.vy += (fy - b.vy) * 0.08;
+            b.vz += (fz - b.vz) * 0.08;
+
+            // Mouse interaction: push away within radius and spring back
+            const dx = b.x - mouseWorldX;
+            const dy = b.y - mouseWorldY;
+            const distSq = dx * dx + dy * dy;
+            const repulseRadius = 1.35;
+            if (distSq < repulseRadius * repulseRadius && distSq > 0.001) {
+              const dist = Math.sqrt(distSq);
+              const force = (1.0 - dist / repulseRadius) * 2.4 * delta;
+              b.vx += (dx / dist) * force;
+              b.vy += (dy / dist) * force;
+            }
+
+            // Move bean
+            b.x += b.vx * delta * 1.8;
+            b.y += b.vy * delta * 1.8;
+            b.z += b.vz * delta * 1.8;
+            b.vx *= 0.96;
+            b.vy *= 0.96;
+            b.vz *= 0.96;
+
+            // Per-bean spin
+            b.rotX += b.spinX * delta * (1.0 + Math.abs(b.vx) * 2.0);
+            b.rotY += b.spinY * delta * (1.0 + Math.abs(b.vy) * 2.0);
+            b.rotZ += b.spinZ * delta;
+
+            // Zone avoidance: Tagline zone (bottom-left 40% width x 25% height)
+            if (b.x > -3.8 && b.x < -0.5 && b.y > -2.3 && b.y < -1.05) {
+              b.vx += 1.0 * delta;
+              b.vy += 1.0 * delta;
+            }
+            // Zone avoidance: Nav zone (top 12%)
+            if (b.y > 1.82) {
+              b.y = 1.80;
+              b.vy = -0.6;
+            }
+
+            // Boundary wrap-around
+            if (b.y < -2.4) {
+              b.y = 2.4;
+              b.x = ((Math.random() - 0.5) * 8.0);
+            } else if (b.y > 2.45) {
+              b.y = -2.35;
+            }
+            if (b.x < -4.8) b.x = 4.7;
+            if (b.x > 4.8) b.x = -4.7;
+            if (b.z < -4.2) b.z = 0.2;
+            if (b.z > 0.5) b.z = -3.8;
+          }
+
+          // Depth-based parallax: shallow Z moves more with mouse
+          const depthFactor = THREE.MathUtils.mapLinear(b.z, -4.2, 0.5, 0.35, 1.3);
+          const px = b.x + this.mouse.x * 0.18 * depthFactor;
+          const py = b.y - this.mouse.y * 0.14 * depthFactor;
+          const pz = b.z;
+
+          // Streaking elongation during fast scroll
+          const streakScaleY = Math.min(b.scale * (1.0 + Math.abs(scrollVelocity) * 0.6), b.scale * 1.8);
+
+          dummy.position.set(px, py, pz);
+          dummy.rotation.set(b.rotX, b.rotY, b.rotZ);
+          dummy.scale.set(b.scale, streakScaleY, b.scale);
+          dummy.updateMatrix();
+          this.beanMesh.setMatrixAt(i, dummy.matrix);
+        }
+        this.beanMesh.instanceMatrix.needsUpdate = true;
       }
     }
 
@@ -1605,6 +1754,9 @@ export class EmberScene {
 
     if (this.steamMaterial && this.steamMaterial.uniforms) {
       this.steamMaterial.uniforms.uTime.value = elapsedTime;
+      if (this.steamMaterial.uniforms.uMouse) {
+        this.steamMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
+      }
     }
 
     // 3. Render Frame

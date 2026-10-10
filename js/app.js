@@ -52,8 +52,10 @@ class EmberApp {
   }
 
   initNavigation() {
-    // Nav links smooth scroll via Lenis
+    const nav = document.querySelector('.site-nav');
     const links = document.querySelectorAll('.nav-link');
+
+    // Nav links smooth scroll via Lenis
     links.forEach(link => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
@@ -69,6 +71,42 @@ class EmberApp {
         }
       });
     });
+
+    // Auto-hide on scroll down, show on scroll up & current section dot
+    let lastScroll = 0;
+    if (this.lenis) {
+      this.lenis.on('scroll', ({ scroll, velocity }) => {
+        const isDown = scroll > lastScroll;
+        if (scroll > 120 && isDown && velocity > 0.4) {
+          nav?.classList.add('is-hidden');
+        } else if (!isDown || scroll <= 120) {
+          nav?.classList.remove('is-hidden');
+        }
+        lastScroll = Math.max(0, scroll);
+
+        // Track current section for nav indicator dot
+        const sections = [
+          { id: 'menu', link: '#menu' },
+          { id: 'process', link: '#process' },
+          { id: 'finale', link: '#visit' }
+        ];
+
+        let activeLink = null;
+        for (const sec of sections) {
+          const el = document.getElementById(sec.id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= window.innerHeight * 0.5 && rect.bottom >= window.innerHeight * 0.2) {
+              activeLink = sec.link;
+            }
+          }
+        }
+
+        links.forEach(l => {
+          l.classList.toggle('is-current', l.getAttribute('href') === activeLink);
+        });
+      });
+    }
   }
 
   initReservationModal() {
