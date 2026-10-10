@@ -1108,6 +1108,7 @@ export class EmberScene {
   setBeanRainScrub(progress) {
     this.scrub.sectionMode = 'bean-rain';
     if (this.processGroup) this.processGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = true;
     this.scrub.beanRainProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
       this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
@@ -1144,10 +1145,24 @@ export class EmberScene {
     this.camera.position.set(0, 0, 6.1);
     this.camera.lookAt(0, 0, 0);
 
-    // Cup collapses and recedes smoothly so bean vortex takes center stage
-    this.scrub.heroScale = 0.0;
-    this.scrub.cupPosY = -5.0;
-    if (this.cupGroup) this.cupGroup.scale.set(0, 0, 0);
+    // Smooth continuous transition from exploded view into bean vortex (no hard cut or blank frame)
+    if (progress < 0.22) {
+      const fade = 1.0 - (progress / 0.22);
+      this.scrub.heroScale = 0.58 * fade;
+      this.scrub.cupPosY = -0.06 - (1.0 - fade) * 1.5;
+      if (this.cupGroup) {
+        this.cupGroup.scale.set(this.scrub.heroScale, this.scrub.heroScale, this.scrub.heroScale);
+        this.cupGroup.position.set(0, this.scrub.cupPosY, 0);
+        this.cupGroup.visible = fade > 0.01;
+      }
+    } else {
+      this.scrub.heroScale = 0.0;
+      this.scrub.cupPosY = -5.0;
+      if (this.cupGroup) {
+        this.cupGroup.scale.set(0, 0, 0);
+        this.cupGroup.visible = false;
+      }
+    }
 
     if (!this._reusableDummy) {
       this._reusableDummy = new THREE.Object3D();

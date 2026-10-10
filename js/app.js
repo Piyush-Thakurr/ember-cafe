@@ -38,7 +38,9 @@ class EmberApp {
       // 4. Initialize Scroll Orchestrator after preloader finishes
       if (this.stageAPI) {
         this.scroll = new EmberScroll(this.stageAPI);
+        window.emberScroll = this.scroll;
         ScrollTrigger.refresh();
+        this.lenis?.resize();
       }
     });
 
@@ -194,14 +196,15 @@ class EmberApp {
     gsap.registerPlugin(ScrollTrigger);
 
     this.lenis = new Lenis({
-      lerp: 0.08,
+      lerp: 0.085,
       smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 1.5
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.4
     });
 
     window.emberLenis = this.lenis;
     this.lenis.on('scroll', ScrollTrigger.update);
+    ScrollTrigger.addEventListener('refresh', () => this.lenis.resize());
 
     gsap.ticker.add((time) => {
       this.lenis.raf(time * 1000);

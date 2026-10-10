@@ -52,8 +52,14 @@ export class EmberScroll {
         start: 'top top',
         end: '+=130%',
         pin: true,
-        scrub: 1.0,
-        anticipatePin: 1
+        scrub: 0.8,
+        anticipatePin: 1,
+        onEnter: () => window.emberStage?.setHeroScrub?.(0),
+        onEnterBack: () => window.emberStage?.setHeroScrub?.(1),
+        onUpdate: (self) => {
+          if (!self.isActive) return;
+          window.emberStage?.setHeroScrub?.(self.progress);
+        }
       }
     });
 
@@ -79,16 +85,6 @@ export class EmberScroll {
       duration: 0.25
     }, 0.85);
 
-    // 3D Cup scales 1 -> 1.6 and tilts -7.5 degrees
-    heroTl.to({ p: 0 }, {
-      p: 1,
-      ease: 'power3.inOut',
-      duration: 1.0,
-      onUpdate: function() {
-        window.emberStage?.setHeroScrub?.(this.targets()[0].p);
-      }
-    }, 0);
-
     // ----------------------------------------------------
     // 2. Dive (State 2: Camera dollies into crema, ripple reacts to velocity)
     // ----------------------------------------------------
@@ -98,9 +94,12 @@ export class EmberScroll {
         start: 'top top',
         end: '+=150%',
         pin: true,
-        scrub: 1.0,
+        scrub: 0.8,
         anticipatePin: 1,
+        onEnter: () => window.emberStage?.setDiveScrub?.(0, 0),
+        onEnterBack: () => window.emberStage?.setDiveScrub?.(1, 0),
         onUpdate: (self) => {
+          if (!self.isActive) return;
           const velocity = self.getVelocity() / 400;
           window.emberStage?.setDiveScrub?.(self.progress, velocity);
         },
@@ -109,39 +108,45 @@ export class EmberScroll {
       }
     });
 
-    // Dark atmospheric vignette overlay: fades in for crema immersion, fades out before Exploded view
+    // Dark atmospheric vignette overlay: warm caramel/espresso gradient, never pure black
     diveTl.to('.dive-fade-overlay', {
-      opacity: 0.90,
-      ease: 'power3.inOut',
-      duration: 0.4
-    }, 0)
+      opacity: 0.65,
+      ease: 'power2.inOut',
+      duration: 0.35
+    }, 0.05)
     .to('.dive-fade-overlay', {
       opacity: 0,
-      ease: 'power3.inOut',
-      duration: 0.25
-    }, 0.75);
+      ease: 'power2.inOut',
+      duration: 0.30
+    }, 0.65);
 
     // Masked line-by-line reveal for "Look closer. The crema is a map."
+    // Enters cleanly at 0.12-0.20 and holds for at least 35vh of scroll with a slow parallax drift
     diveTl.fromTo('.line-text-1', {
       yPercent: 110
     }, {
       yPercent: 0,
-      ease: 'expo.out',
-      duration: 0.35
-    }, 0.25)
+      ease: 'power3.out',
+      duration: 0.20
+    }, 0.12)
     .fromTo('.line-text-2', {
       yPercent: 110
     }, {
       yPercent: 0,
-      ease: 'expo.out',
-      duration: 0.35
-    }, 0.35)
+      ease: 'power3.out',
+      duration: 0.20
+    }, 0.18)
+    .to('.dive-headline', {
+      y: -24,
+      ease: 'none',
+      duration: 0.55
+    }, 0.20)
     .to('.dive-headline', {
       opacity: 0,
-      y: -30,
-      ease: 'power3.inOut',
-      duration: 0.25
-    }, 0.75);
+      y: -40,
+      ease: 'power2.in',
+      duration: 0.15
+    }, 0.80);
 
     // ----------------------------------------------------
     // 3. Exploded View (Cup separates along Y, dynamic 3D projected SVG leader lines & layer tags)
@@ -152,9 +157,12 @@ export class EmberScroll {
         start: 'top top',
         end: '+=160%',
         pin: true,
-        scrub: 1.0,
+        scrub: 0.8,
         anticipatePin: 1,
+        onEnter: () => window.emberStage?.setExplodedScrub?.(0),
+        onEnterBack: () => window.emberStage?.setExplodedScrub?.(1),
         onUpdate: (self) => {
+          if (!self.isActive) return;
           const p = self.progress;
           // Separation completes at p = 0.45 so layers reach final position before lines draw
           const separationProgress = Math.min(p / 0.45, 1.0);
@@ -328,9 +336,12 @@ export class EmberScroll {
         start: 'top top',
         end: '+=160%',
         pin: true,
-        scrub: 1.0,
+        scrub: 0.8,
         anticipatePin: 1,
+        onEnter: () => window.emberStage?.setBeanRainScrub?.(0),
+        onEnterBack: () => window.emberStage?.setBeanRainScrub?.(1),
         onUpdate: (self) => {
+          if (!self.isActive) return;
           // Velocity-based dynamic text skewing capped at ±4°
           const v = self.getVelocity() / 350;
           const clampedSkew = gsap.utils.clamp(-4, 4, v);
@@ -405,6 +416,7 @@ export class EmberScroll {
           onEnter: () => window.emberStage?.setMenuScrub?.(0),
           onEnterBack: () => window.emberStage?.setMenuScrub?.(1),
           onUpdate: (self) => {
+            if (!self.isActive) return;
             const p = self.progress;
             window.emberStage?.setMenuScrub?.(p);
 
@@ -490,7 +502,10 @@ export class EmberScroll {
         pin: true,
         scrub: 1.0,
         anticipatePin: 1,
+        onEnter: () => window.emberStage?.setProcessScrub?.(0),
+        onEnterBack: () => window.emberStage?.setProcessScrub?.(1),
         onUpdate: (self) => {
+          if (!self.isActive) return;
           const p = self.progress;
           window.emberStage?.setProcessScrub?.(p);
 
@@ -571,7 +586,10 @@ export class EmberScroll {
       start: 'top bottom',
       end: 'bottom bottom',
       scrub: 1.0,
+      onEnter: () => window.emberStage?.setFinaleScrub?.(0),
+      onEnterBack: () => window.emberStage?.setFinaleScrub?.(1),
       onUpdate: (self) => {
+        if (!self.isActive) return;
         window.emberStage?.setFinaleScrub?.(self.progress);
       }
     });

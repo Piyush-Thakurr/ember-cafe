@@ -48,3 +48,12 @@ Fields: Name / Date / Party size / Time
 Submit: Reserve a table
 Confirmation: Table requested. See you soon.
 Close: Close
+
+MENU EXTRAS
+Serving: 01 Hot / 02 Hot / 03 Hot / 04 Iced / 05 Iced
+Hint: Scroll to taste
+
+FOOTER
+Links: Menu / Process / Visit / Reserve
+Closing line: Roasted slow. Poured loud.
+Back to top: Back to top

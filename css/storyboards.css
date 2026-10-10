@@ -67,6 +67,7 @@
   position: relative;
   overflow: hidden;
   background: transparent;
+  margin-top: -100vh;
 }
 
 .dive-content-pin {
@@ -81,7 +82,7 @@
   padding: 0 var(--margin-desktop);
   box-sizing: border-box;
   pointer-events: none;
-  z-index: 10;
+  z-index: 25;
 }
 
 .dive-headline {
@@ -110,7 +111,7 @@
 .dive-fade-overlay {
   position: absolute;
   inset: 0;
-  background-color: var(--color-surface-container-lowest);
+  background: radial-gradient(circle at center, rgba(198, 138, 82, 0.40) 0%, rgba(138, 90, 53, 0.60) 50%, rgba(20, 16, 13, 0.88) 100%);
   opacity: 0;
   pointer-events: none;
   z-index: 6; /* In front of 3D canvas (z-index: 5), behind text (z-index: 10) */
@@ -124,6 +125,7 @@
   position: relative;
   overflow: hidden;
   background: transparent;
+  margin-top: -100vh;
 }
 
 .exploded-content-pin {
@@ -245,6 +247,7 @@
   position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse at center, transparent 65%, rgba(20, 16, 13, 0.25) 100%);
+  margin-top: -100vh;
 }
 
 .bean-rain-glow {
