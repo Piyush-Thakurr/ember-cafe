@@ -11,6 +11,7 @@ EXPLODED VIEW (section 3)
 01 ORIGIN — Single-estate beans, picked ripe, washed slow.
 02 ROAST — Medium-dark, rested seven days, never rushed.
 03 NOTES — Dark cocoa, burnt caramel, orange peel.
+LAYER TAGS: Spoon / Crema / Coffee / Cup / Saucer
 
 BEAN RAIN (section 4)
 Outline headline: 400 BEANS. ONE CUP.

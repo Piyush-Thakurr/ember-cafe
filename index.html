@@ -125,19 +125,44 @@
     <!-- Section 3: Exploded View -->
     <section class="section-exploded scroll-section" id="exploded">
       <div class="exploded-content-pin">
-        <!-- SVG Leader Lines & Dots -->
-        <svg class="exploded-svg-layer" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
-          <!-- Line 1: Origin (Top-left to foam/crema disc) + 6px dot -->
-          <path class="exploded-leader-line line-origin" d="M 450 260 L 840 285" />
-          <circle class="exploded-leader-dot dot-origin" cx="840" cy="285" r="3" />
+        <!-- SVG Leader Lines, Layer Tags & Dots -->
+        <svg class="exploded-svg-layer" aria-hidden="true">
+          <!-- Story Leader Line 1: Origin (Left to crema disc) + 6px ember dot -->
+          <path id="line-origin" class="exploded-leader-line line-origin" d="M 450 260 L 840 285" />
+          <circle id="dot-origin" class="exploded-leader-dot dot-origin" cx="840" cy="285" r="3" />
 
-          <!-- Line 2: Roast (Right to cup rim/body) + 6px dot -->
-          <path class="exploded-leader-line line-roast" d="M 1470 540 L 1180 575" />
-          <circle class="exploded-leader-dot dot-roast" cx="1180" cy="575" r="3" />
+          <!-- Story Leader Line 2: Roast (Right to coffee disc) + 6px ember dot -->
+          <path id="line-roast" class="exploded-leader-line line-roast" d="M 1470 540 L 1180 575" />
+          <circle id="dot-roast" class="exploded-leader-dot dot-roast" cx="1180" cy="575" r="3" />
 
-          <!-- Line 3: Notes (Bottom-left to cup body, extending 200px to land on body) + 6px dot -->
-          <path class="exploded-leader-line line-notes" d="M 450 740 L 840 710" />
-          <circle class="exploded-leader-dot dot-notes" cx="840" cy="710" r="3" />
+          <!-- Story Leader Line 3: Notes (Left to cup body) + 6px ember dot -->
+          <path id="line-notes" class="exploded-leader-line line-notes" d="M 450 740 L 840 710" />
+          <circle id="dot-notes" class="exploded-leader-dot dot-notes" cx="840" cy="710" r="3" />
+
+          <!-- Layer Tag 1: SPOON (Right side: 20px tick line + 4px dot) -->
+          <line id="tick-spoon" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
+          <circle id="dot-spoon" class="tag-dot" cx="0" cy="0" r="2" />
+          <text id="tag-spoon" class="exploded-tag-text" x="0" y="0">SPOON</text>
+
+          <!-- Layer Tag 2: CREMA (Right side: 20px tick line + 4px dot) -->
+          <line id="tick-crema" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
+          <circle id="dot-crema" class="tag-dot" cx="0" cy="0" r="2" />
+          <text id="tag-crema" class="exploded-tag-text" x="0" y="0">CREMA</text>
+
+          <!-- Layer Tag 3: COFFEE (Left side: 20px tick line + 4px dot) -->
+          <line id="tick-coffee" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
+          <circle id="dot-coffee" class="tag-dot" cx="0" cy="0" r="2" />
+          <text id="tag-coffee" class="exploded-tag-text" x="0" y="0">COFFEE</text>
+
+          <!-- Layer Tag 4: CUP (Right side: 20px tick line + 4px dot) -->
+          <line id="tick-cup" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
+          <circle id="dot-cup" class="tag-dot" cx="0" cy="0" r="2" />
+          <text id="tag-cup" class="exploded-tag-text" x="0" y="0">CUP</text>
+
+          <!-- Layer Tag 5: SAUCER (Right side: 20px tick line + 4px dot) -->
+          <line id="tick-saucer" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
+          <circle id="dot-saucer" class="tag-dot" cx="0" cy="0" r="2" />
+          <text id="tag-saucer" class="exploded-tag-text" x="0" y="0">SAUCER</text>
         </svg>
 
         <!-- Labels (Verbatim from content.md) -->

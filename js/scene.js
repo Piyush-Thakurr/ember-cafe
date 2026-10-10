@@ -29,8 +29,10 @@ export class EmberScene {
     this.handleMesh = null;
     this.liquidMesh = null;
     this.foamMesh = null;
+    this.coffeeMesh = null;
     this.spoonMesh = null;
     this.cremaMaterial = null;
+    this.cremaDiscMaterial = null;
     this.steamParticles = null;
     this.steamMaterial = null;
     
@@ -359,43 +361,71 @@ export class EmberScene {
   }
 
   createExplodedComponents() {
-    // 1. Foam Disc Mesh (ONLY visible in Exploded View)
+    // 1. Crema Disc Mesh (Uses same caramel crema shader as hero: radial #C68A52 to #8A5A35 with ripples)
+    this.cremaDiscMaterial = this.cremaMaterial.clone();
+    this.cremaDiscMaterial.side = THREE.DoubleSide;
     const foamGeo = new THREE.CircleGeometry(1.06, 48);
-    const foamMat = new THREE.MeshStandardMaterial({
-      color: 0xd99e5e,
-      roughness: 0.40,
-      metalness: 0.05,
-      transparent: true,
-      opacity: 0.88
-    });
-    this.foamMesh = new THREE.Mesh(foamGeo, foamMat);
+    this.foamMesh = new THREE.Mesh(foamGeo, this.cremaDiscMaterial);
     this.foamMesh.rotation.x = -Math.PI / 2;
-    this.foamMesh.position.y = 0.54;
-    this.foamMesh.visible = false; // Hidden in Hero & State 1 so crema shader is fully visible!
+    this.foamMesh.position.y = 0.52;
+    this.foamMesh.visible = false;
     this.cupGroup.add(this.foamMesh);
 
-    // 2. Artisanal Brushed Brass Spoon Mesh (Thicker & bolder)
+    // 2. Coffee Disc Mesh (Clearly visible dark glossy disc with thin ember glow ring at edge)
+    this.coffeeMesh = new THREE.Group();
+    const coffeeCircleGeo = new THREE.CircleGeometry(1.06, 48);
+    const coffeeMat = new THREE.MeshStandardMaterial({
+      color: 0x140703, // Dark espresso roast
+      roughness: 0.12, // High-gloss liquid reflection
+      metalness: 0.25,
+      side: THREE.DoubleSide
+    });
+    const coffeeCircle = new THREE.Mesh(coffeeCircleGeo, coffeeMat);
+    this.coffeeMesh.add(coffeeCircle);
+
+    // Thin ember glow ring along the outer edge
+    const coffeeGlowGeo = new THREE.RingGeometry(1.01, 1.065, 48);
+    const coffeeGlowMat = new THREE.MeshBasicMaterial({
+      color: 0xe0541f, // Ember orange #E0541F
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide
+    });
+    const coffeeGlow = new THREE.Mesh(coffeeGlowGeo, coffeeGlowMat);
+    coffeeGlow.position.z = 0.002;
+    this.coffeeMesh.add(coffeeGlow);
+
+    this.coffeeMesh.rotation.x = -Math.PI / 2;
+    this.coffeeMesh.position.y = 0.50;
+    this.coffeeMesh.visible = false;
+    this.cupGroup.add(this.coffeeMesh);
+
+    // 3. Artisanal Brushed Brass Spoon Mesh (40% thicker, centered along the centre line)
     this.spoonMesh = new THREE.Group();
     const spoonMat = new THREE.MeshStandardMaterial({
       color: 0xd4b278, // Warm artisanal brushed brass
-      roughness: 0.32,
-      metalness: 0.85
+      roughness: 0.28,
+      metalness: 0.88
     });
 
-    const spoonHandleGeo = new THREE.CylinderGeometry(0.046, 0.068, 1.42, 16);
+    // 40% thicker handle (radius 0.065 to 0.095, length 1.45)
+    const spoonHandleGeo = new THREE.CylinderGeometry(0.065, 0.095, 1.45, 16);
     const spoonHandle = new THREE.Mesh(spoonHandleGeo, spoonMat);
-    spoonHandle.position.set(0, 0.65, 0);
+    spoonHandle.rotation.z = Math.PI / 2;
+    spoonHandle.position.set(-0.25, 0, 0);
     this.spoonMesh.add(spoonHandle);
 
-    const spoonBowlGeo = new THREE.SphereGeometry(0.24, 20, 20);
+    // 40% thicker bowl (radius 0.336)
+    const spoonBowlGeo = new THREE.SphereGeometry(0.336, 20, 20);
     const spoonBowl = new THREE.Mesh(spoonBowlGeo, spoonMat);
-    spoonBowl.scale.set(1.0, 1.45, 0.45);
-    spoonBowl.position.set(0, 0, 0);
+    spoonBowl.scale.set(1.15, 1.45, 0.55);
+    spoonBowl.position.set(0.65, 0, 0);
     this.spoonMesh.add(spoonBowl);
 
-    this.spoonMesh.rotation.set(0.35, -0.4, 0.65);
-    this.spoonMesh.position.set(1.1, 0.55, 0.3);
-    this.spoonMesh.scale.set(1.0, 1.0, 1.0);
+    // Centered along X=0, gentle floating tilt
+    this.spoonMesh.rotation.set(0.18, 0.12, -0.08);
+    this.spoonMesh.position.set(0, 0.55, 0);
+    this.spoonMesh.visible = false;
     this.cupGroup.add(this.spoonMesh);
   }
 
@@ -588,10 +618,41 @@ export class EmberScene {
         this.beanMeshFg.setColorAt(i, color);
       }
 
-      // Store initial coordinate and vortex targets for Bean Rain (State 3: 24vh radius)
-      const ringAngle = (i / totalBeans) * Math.PI * 2.0;
-      const ringRadius = base24vhRadius + ((i % 9) - 4) * 0.022; // Organic band centered at 24vh
+      // Store initial coordinate and vortex targets for Bean Rain (100 sectors x 4 layers = 400 beans)
+      const sector = Math.floor(i / 4); // 0 to 99
+      const layer = i % 4;             // 0, 1, 2, 3
+
+      // Even angular spacing all the way round:
+      const baseAngle = (sector / 100) * Math.PI * 2.0;
+      const ringAngle = baseAngle + layer * 0.012; // slight organic stagger
+
+      // Uniform band ~4 beans thick centered on 24vh (0.9513 units)
+      const radialOffset = (layer - 1.5) * 0.038 + ((sector % 5) - 2) * 0.005;
+      const targetRingRadius = base24vhRadius + radialOffset;
       const origRadius = Math.sqrt(x * x + y * y);
+
+      // Depth: front arc vs back arc
+      const baseTiltZ = (-Math.cos(ringAngle) + Math.sin(ringAngle)) * 0.7071 * 0.38;
+      const isFrontArc = baseTiltZ > 0.02;
+
+      // Check if crossing key letter zones: B, E around 1.7 to 2.6 rad, O around 4.9 to 5.6 rad
+      const isOverKeyLetters = (ringAngle >= 1.7 && ringAngle <= 2.6) || (ringAngle >= 4.9 && ringAngle <= 5.6);
+
+      let isForeground = false;
+      let targetZ = -0.10;
+
+      if (isFrontArc) {
+        // Front arc is sparser than back arc to ensure B, E, O are never covered
+        if (isOverKeyLetters) {
+          isForeground = (layer === 0 && sector % 4 === 0);
+        } else {
+          isForeground = (layer === 0);
+        }
+        targetZ = isForeground ? (0.10 + layer * 0.02) : (-0.06 - layer * 0.04);
+      } else {
+        isForeground = false;
+        targetZ = -0.12 - layer * 0.05 + baseTiltZ * 0.5;
+      }
 
       this.beanInitialData.push({
         origPos: new THREE.Vector3(x, y, z),
@@ -599,7 +660,9 @@ export class EmberScene {
         origScale: scale,
         origRadius: Math.max(origRadius, 1.8),
         ringAngle: ringAngle,
-        targetRingRadius: ringRadius
+        targetRingRadius: targetRingRadius,
+        targetZ: targetZ,
+        isForeground: isForeground
       });
     }
 
@@ -706,7 +769,7 @@ export class EmberScene {
     }
   }
 
-  // Exploded View: cup components separate along Y centre line
+  // Exploded View: cup components separate along Y centre line with even 0.50 visible gaps
   setExplodedScrub(progress) {
     this.scrub.explodedProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
@@ -717,40 +780,114 @@ export class EmberScene {
     if (this.beanRainKey) this.beanRainKey.intensity = 0.0;
     this.renderer.toneMappingExposure = 1.15;
 
-    if (this.foamMesh) this.foamMesh.visible = progress > 0.02;
-    if (!this.cupMesh || !this.saucerMesh || !this.liquidMesh) return;
+    const inExploded = progress > 0.005;
+    if (this.foamMesh) this.foamMesh.visible = inExploded;
+    if (this.coffeeMesh) this.coffeeMesh.visible = inExploded;
+    if (this.spoonMesh) this.spoonMesh.visible = inExploded;
+    if (this.liquidMesh) this.liquidMesh.visible = !inExploded;
 
-    // Frame camera and reset cup alignment for exploded view
+    if (!this.cupMesh || !this.saucerMesh) return;
+
+    // Centered camera and cup alignment for exploded view
     this.scrub.cameraZ = 6.1;
-    this.scrub.cameraY = 0.25;
-    this.scrub.cameraLookY = -0.38;
+    this.scrub.cameraY = 0.0;
+    this.scrub.cameraLookY = 0.0;
 
-    this.scrub.heroTiltZ = 0;
-    this.scrub.heroTiltX = 0.12;
-    this.scrub.cupPosY = -0.90;
-    this.scrub.heroScale = 0.72;
+    this.scrub.heroTiltZ = 0.0;
+    this.scrub.heroTiltX = 0.14; // slight tilt to see layer surfaces
+    this.scrub.cupPosY = -0.05;
+    this.scrub.heroScale = 0.50; // Scale 0.50 ensures entire stack fits with ample top/bottom margin
 
-    // Saucer moves down
-    this.saucerMesh.position.y = -progress * 1.5;
-    if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83 - progress * 1.5;
+    // Direct synchronization to avoid any lerp lag
+    this.cupGroup.scale.set(0.50, 0.50, 0.50);
+    this.cupGroup.position.set(0, -0.05, 0);
+    this.cupGroup.rotation.set(0.14, 0, 0);
+    this.camera.position.set(0, 0, 6.1);
+    this.camera.lookAt(0, 0, 0);
 
-    // Cup body stays centered / slight offset
-    this.cupMesh.position.y = -progress * 0.45;
+    // 5 Layers separation along Y centre line with even 0.50 visible gaps:
+    // Spoon:   0.55 -> +1.93
+    // Crema:   0.52 -> +1.28
+    // Coffee:  0.50 -> +0.78
+    // Cup:     0.0  -> -0.40
+    // Saucer:  0.0  -> -1.01
 
-    // Liquid separates upward
-    this.liquidMesh.position.y = 0.52 + progress * 0.70;
+    const p = progress;
+    this.saucerMesh.position.y = -p * 1.01;
+    if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83 - p * 1.01;
 
-    // Foam disc separates higher
-    if (this.foamMesh) this.foamMesh.position.y = 0.54 + progress * 1.45;
+    this.cupMesh.position.y = -p * 0.40;
 
-    // Spoon separates highest
+    if (this.coffeeMesh) {
+      this.coffeeMesh.position.y = THREE.MathUtils.lerp(0.50, 0.78, p);
+    }
+
+    if (this.foamMesh) {
+      this.foamMesh.position.y = THREE.MathUtils.lerp(0.52, 1.28, p);
+    }
+
     if (this.spoonMesh) {
-      this.spoonMesh.position.y = 0.55 + progress * 2.2;
-      this.spoonMesh.position.x = 1.1 + progress * 0.3;
+      this.spoonMesh.position.y = THREE.MathUtils.lerp(0.55, 1.93, p);
+      this.spoonMesh.position.x = 0;
     }
   }
 
-  // State 3: Bean Rain: 400 beans fall and spiral into a vortex ring
+  // Real-time 3D projected screen coordinates (pixels) for all 5 layers
+  getExplodedLayerScreenCoords() {
+    if (!this.cupGroup || !this.camera) return null;
+
+    this.cupGroup.updateMatrixWorld(true);
+    this.camera.updateMatrixWorld(true);
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const projectToScreen = (localVec) => {
+      const v = localVec.clone();
+      v.applyMatrix4(this.cupGroup.matrixWorld);
+      v.project(this.camera);
+      return {
+        x: (v.x * 0.5 + 0.5) * width,
+        y: (-v.y * 0.5 + 0.5) * height
+      };
+    };
+
+    // 1. Spoon: right tip at local (0.75, spoonPosY, 0)
+    const spoonY = this.spoonMesh ? this.spoonMesh.position.y : 1.93;
+    const spoonRight = projectToScreen(new THREE.Vector3(0.75, spoonY, 0));
+
+    // 2. Crema Disc: left edge and right edge (radius 1.06)
+    const cremaY = this.foamMesh ? this.foamMesh.position.y : 1.28;
+    const cremaLeft = projectToScreen(new THREE.Vector3(-1.06, cremaY, 0));
+    const cremaRight = projectToScreen(new THREE.Vector3(1.06, cremaY, 0));
+
+    // 3. Coffee Disc: left edge and right edge (radius 1.06)
+    const coffeeY = this.coffeeMesh ? this.coffeeMesh.position.y : 0.78;
+    const coffeeLeft = projectToScreen(new THREE.Vector3(-1.06, coffeeY, 0));
+    const coffeeRight = projectToScreen(new THREE.Vector3(1.06, coffeeY, 0));
+
+    // 4. Cup Body: left edge and right edge (radius 1.02 at middle of cup)
+    const cupY = this.cupMesh ? this.cupMesh.position.y : -0.40;
+    const cupLeft = projectToScreen(new THREE.Vector3(-1.02, cupY + 0.10, 0));
+    const cupRight = projectToScreen(new THREE.Vector3(1.02, cupY + 0.10, 0));
+
+    // 5. Saucer: right edge (radius 2.20)
+    const saucerY = this.saucerMesh ? this.saucerMesh.position.y : -1.01;
+    const saucerRight = projectToScreen(new THREE.Vector3(2.20, saucerY - 0.54, 0));
+
+    return {
+      spoonRight,
+      cremaLeft,
+      cremaRight,
+      coffeeLeft,
+      coffeeRight,
+      cupLeft,
+      cupRight,
+      saucerRight
+    };
+  }
+
+  // State 3: Bean Rain: 400 beans spiral into a clean, even 24vh ring
   setBeanRainScrub(progress) {
     this.scrub.beanRainProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
@@ -758,6 +895,7 @@ export class EmberScene {
       if (this.steamParticles) this.steamParticles.visible = false;
     }
     if (this.foamMesh) this.foamMesh.visible = false;
+    if (this.coffeeMesh) this.coffeeMesh.visible = false;
 
     // Show/hide foreground canvas (rendered only while bean rain is in view)
     if (this.fgCanvas) {
@@ -772,7 +910,7 @@ export class EmberScene {
 
     if (!this.beanMesh || !this.beanInitialData.length) return;
 
-    // Reset bean mesh position & rotation so ring is precisely centered
+    // Reset bean mesh position & rotation so ring is precisely centered horizontally and vertically
     this.beanMesh.position.set(0, 0, 0);
     this.beanMesh.rotation.set(0, 0, 0);
     if (this.beanMeshFg) {
@@ -780,7 +918,7 @@ export class EmberScene {
       this.beanMeshFg.rotation.set(0, 0, 0);
     }
 
-    // Camera transitions smoothly to level (perpendicular to ring plane)
+    // Camera transitions smoothly to level (centered at 50vh, looking at (0,0,0))
     this.scrub.cameraY = 0.25 * (1.0 - progress);
     this.scrub.cameraLookY = -0.38 * (1.0 - progress);
 
@@ -806,35 +944,27 @@ export class EmberScene {
     const tempVec = this._reusableVec;
     const count = this.beanInitialData.length;
 
-    const spiralTurns = 3.0;
-    // Ring center at 52% of viewport height (camera view height = 3.9639, 2% below center = -0.0793)
-    const targetCenterY = -0.08;
+    const spiralTurns = 2.5;
 
     for (let i = 0; i < count; i++) {
       const b = this.beanInitialData[i];
 
-      // Spiral trajectory converging into 24vh ring centered at 52% viewport height
+      // Spiral trajectory converging into true circle of radius 24vh, centered at (0, 0)
       const currentAngle = b.ringAngle + (1.0 - progress) * spiralTurns * Math.PI;
       const currentRadius = THREE.MathUtils.lerp(b.origRadius, b.targetRingRadius, progress);
 
+      // True circle: X and Y both use currentRadius, centered at (0, 0)
       const currentX = Math.cos(currentAngle) * currentRadius;
-      const currentY = THREE.MathUtils.lerp(b.origPos.y, targetCenterY + Math.sin(currentAngle) * currentRadius * 0.96, progress);
-
-      // Ring interlocking with text:
-      // Front arc (top-left, over "400 BEANS.") has Z > 0;
-      // Back arc (bottom-right, over "ONE CUP.") has Z < 0.
-      const baseTiltZ = (-Math.cos(currentAngle) + Math.sin(currentAngle)) * 0.7071 * 0.58;
-      const organicZ = ((i % 7) - 3) * 0.06;
-      const targetZ = baseTiltZ + organicZ;
-      const currentZ = THREE.MathUtils.lerp(b.origPos.z, targetZ, progress);
+      const currentY = THREE.MathUtils.lerp(b.origPos.y, Math.sin(currentAngle) * currentRadius, progress);
+      const currentZ = THREE.MathUtils.lerp(b.origPos.z, b.targetZ, progress);
 
       tempVec.set(currentX, currentY, currentZ);
 
       const rotY = b.origRot.y + progress * Math.PI * 4.0;
       const rotX = b.origRot.x + progress * Math.PI * 2.0;
 
-      // Cap on-screen size: scale clamped <= 0.54 so on-screen size <= 140px
-      const beanScale = Math.min(b.origScale, 0.54);
+      // Cap on-screen size: scale clamped <= 0.46 so on-screen size <= 140px
+      const beanScale = Math.min(b.origScale, 0.46);
 
       dummy.position.copy(tempVec);
       dummy.rotation.set(rotX, rotY, b.origRot.z);
@@ -842,9 +972,8 @@ export class EmberScene {
       dummy.updateMatrix();
 
       // Foreground vs background depth split:
-      // Beans in front of the text plane (currentZ > 0.02) render on the foreground canvas (above text)
-      // Beans behind the text plane (currentZ <= 0.02) render on the background canvas (behind text)
-      if (this.beanMeshFg && progress > 0.08 && currentZ > 0.02) {
+      // Front arc is sparser than back arc; only b.isForeground beans render in foreground
+      if (this.beanMeshFg && progress > 0.08 && b.isForeground) {
         this.beanMeshFg.setMatrixAt(i, dummy.matrix);
         this.beanMesh.setMatrixAt(i, zeroDummy.matrix);
       } else {
@@ -879,25 +1008,32 @@ export class EmberScene {
       this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.045;
 
       if (this.cupGroup) {
-        // Base scrub scale + mouse tilt
         const currentScale = this.scrub.heroScale;
         this.cupGroup.scale.set(currentScale, currentScale, currentScale);
 
-        const targetRotX = this.scrub.heroTiltX + this.mouse.y * 0.10;
-        const targetRotY = -0.16 + Math.sin(elapsedTime * 0.28) * 0.04 + this.mouse.x * 0.16;
-        const targetRotZ = this.scrub.heroTiltZ;
+        if (this.scrub.explodedProgress > 0.005) {
+          // Exploded view: lock directly to scrub values for precise projection
+          this.cupGroup.rotation.set(this.scrub.heroTiltX, 0, this.scrub.heroTiltZ);
+          this.cupGroup.position.set(0, this.scrub.cupPosY, 0);
+          this.camera.position.set(0, this.scrub.cameraY, this.scrub.cameraZ);
+          this.camera.lookAt(0, this.scrub.cameraLookY, 0);
+        } else {
+          const targetRotX = this.scrub.heroTiltX + this.mouse.y * 0.10;
+          const targetRotY = -0.16 + Math.sin(elapsedTime * 0.28) * 0.04 + this.mouse.x * 0.16;
+          const targetRotZ = this.scrub.heroTiltZ;
 
-        this.cupGroup.rotation.x += (targetRotX - this.cupGroup.rotation.x) * 0.08;
-        this.cupGroup.rotation.y += (targetRotY - this.cupGroup.rotation.y) * 0.08;
-        this.cupGroup.rotation.z += (targetRotZ - this.cupGroup.rotation.z) * 0.08;
+          this.cupGroup.rotation.x += (targetRotX - this.cupGroup.rotation.x) * 0.08;
+          this.cupGroup.rotation.y += (targetRotY - this.cupGroup.rotation.y) * 0.08;
+          this.cupGroup.rotation.z += (targetRotZ - this.cupGroup.rotation.z) * 0.08;
 
-        this.cupGroup.position.y += (this.scrub.cupPosY - this.cupGroup.position.y) * 0.08;
+          this.cupGroup.position.y += (this.scrub.cupPosY - this.cupGroup.position.y) * 0.08;
+
+          // Camera dolly lerp
+          this.camera.position.z += (this.scrub.cameraZ - this.camera.position.z) * 0.08;
+          this.camera.position.y += (this.scrub.cameraY - this.camera.position.y) * 0.08;
+          this.camera.lookAt(0, this.scrub.cameraLookY, 0);
+        }
       }
-
-      // Camera dolly lerp
-      this.camera.position.z += (this.scrub.cameraZ - this.camera.position.z) * 0.08;
-      this.camera.position.y += (this.scrub.cameraY - this.camera.position.y) * 0.08;
-      this.camera.lookAt(0, this.scrub.cameraLookY, 0);
 
       // Idle bean drift (only when not scrubbing bean rain to maintain 60 FPS)
       if (this.beanMesh && this.scrub.beanRainProgress < 0.05) {
@@ -910,6 +1046,10 @@ export class EmberScene {
     // 2. Shaders Progression
     if (this.cremaMaterial && this.cremaMaterial.uniforms) {
       this.cremaMaterial.uniforms.uTime.value = elapsedTime;
+    }
+
+    if (this.cremaDiscMaterial && this.cremaDiscMaterial.uniforms) {
+      this.cremaDiscMaterial.uniforms.uTime.value = elapsedTime;
     }
 
     if (this.steamMaterial && this.steamMaterial.uniforms) {
@@ -937,11 +1077,13 @@ export class EmberScene {
       saucer: this.saucerMesh,
       liquid: this.liquidMesh,
       foam: this.foamMesh,
+      coffee: this.coffeeMesh,
       spoon: this.spoonMesh,
       beans: this.beanMesh,
       camera: this.camera,
       scene: this.scene,
       renderer: this.renderer,
+      getExplodedLayerScreenCoords: this.getExplodedLayerScreenCoords.bind(this),
       setLiquidColor: this.setLiquidColor.bind(this),
       setHeroScrub: this.setHeroScrub.bind(this),
       setDiveScrub: this.setDiveScrub.bind(this),

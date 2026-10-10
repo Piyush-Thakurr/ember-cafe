@@ -36,8 +36,8 @@ async function run() {
     consoleErrors.push(err.toString());
   });
 
-  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bust19...');
-  await page.goto('http://localhost:3000/?cache=bust19', { waitUntil: 'networkidle0', timeout: 30000 });
+  console.log('Navigating with hard refresh to http://localhost:3000/?cache=bust30...');
+  await page.goto('http://localhost:3000/?cache=bust30', { waitUntil: 'networkidle0', timeout: 30000 });
 
   // Function to measure FPS over 60 frames
   async function measureFps() {
@@ -61,111 +61,178 @@ async function run() {
     });
   }
 
-  async function scrollToY(targetY) {
-    await page.evaluate((y) => {
-      if (window.emberLenis) {
-        window.emberLenis.scrollTo(y, { immediate: true });
-      } else {
-        window.scrollTo({ top: y, behavior: 'instant' });
-      }
-      if (window.ScrollTrigger) {
+  // Helper to scroll to exact progress of a section's ScrollTrigger
+  async function scrollToSectionProgress(sectionId, targetProgress) {
+    return await page.evaluate(({ id, prog }) => {
+      const triggers = window.ScrollTrigger?.getAll() || [];
+      const st = triggers.find(t => t.trigger && t.trigger.id === id);
+      if (st) {
+        const scrollY = st.start + prog * (st.end - st.start);
+        window.scrollTo(0, scrollY);
+        if (window.emberLenis) {
+          window.emberLenis.scrollTo(scrollY, { immediate: true });
+        }
+        window.ScrollTrigger.refresh();
         window.ScrollTrigger.update();
+        return { start: st.start, end: st.end, targetY: scrollY };
       }
-    }, targetY);
-    await new Promise(r => setTimeout(r, 1600));
+      return null;
+    }, { id: sectionId, prog: targetProgress });
   }
 
-  // 1. Wait for preloader & hero intro to complete
-  console.log('Waiting for preloader and intro...');
-  await new Promise(r => setTimeout(r, 3400));
+  // 1. Wait for preloader & intro to fully complete
+  console.log('Waiting for preloader and intro to fully complete...');
+  await new Promise(r => setTimeout(r, 4500));
 
-  // 2. Exploded view (c: targetY = 6300)
-  console.log('Scrolling to Exploded View (y=6300)...');
-  await scrollToY(6300);
-  const explodedFps = await measureFps();
-  const explodedPath = path.join(artifactDir, 'exploded_view_fixed.png');
-  await page.screenshot({ path: explodedPath });
-  console.log(`Exploded View captured: ${explodedFps} FPS -> ${explodedPath}`);
+  // --- PART A: 1920x1080 CAPTURES ---
 
-  // 3. Bean rain halfway (b: targetY = 8700)
-  console.log('Scrolling to Bean Rain halfway (y=8700)...');
-  await scrollToY(8700);
+  // (c1) Exploded View at full separation at 1920x1080 (progress ~0.70 where lines are drawn)
+  console.log('Scrolling to Exploded View at full separation (1920x1080)...');
+  await scrollToSectionProgress('exploded', 0.68);
+  await new Promise(r => setTimeout(r, 1600));
+  const exploded1080Fps = await measureFps();
+  const exploded1080Path = path.join(artifactDir, 'exploded_view_1920x1080.png');
+  await page.screenshot({ path: exploded1080Path });
+  console.log(`Exploded View (1920x1080) captured: ${exploded1080Fps} FPS -> ${exploded1080Path}`);
+
+  // Inspect Exploded layer bounds and SVG endpoints at 1920x1080
+  const explodedInspection1080 = await page.evaluate(() => {
+    const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
+    const lOrigin = document.getElementById('line-origin')?.getAttribute('d');
+    const dOrigin = { cx: document.getElementById('dot-origin')?.getAttribute('cx'), cy: document.getElementById('dot-origin')?.getAttribute('cy') };
+    const lRoast = document.getElementById('line-roast')?.getAttribute('d');
+    const dRoast = { cx: document.getElementById('dot-roast')?.getAttribute('cx'), cy: document.getElementById('dot-roast')?.getAttribute('cy') };
+    const lNotes = document.getElementById('line-notes')?.getAttribute('d');
+    const dNotes = { cx: document.getElementById('dot-notes')?.getAttribute('cx'), cy: document.getElementById('dot-notes')?.getAttribute('cy') };
+
+    const tags = ['spoon', 'crema', 'coffee', 'cup', 'saucer'].map(id => {
+      const text = document.getElementById(`tag-${id}`);
+      const tick = document.getElementById(`tick-${id}`);
+      const dot = document.getElementById(`dot-${id}`);
+      return {
+        id,
+        text: text?.textContent,
+        textOpacity: text ? window.getComputedStyle(text).opacity : null,
+        textX: text?.getAttribute('x'),
+        textY: text?.getAttribute('y'),
+        tickX1: tick?.getAttribute('x1'),
+        tickX2: tick?.getAttribute('x2'),
+        tickY1: tick?.getAttribute('y1'),
+        dotCx: dot?.getAttribute('cx'),
+        dotCy: dot?.getAttribute('cy'),
+        dotOpacity: dot ? window.getComputedStyle(dot).opacity : null
+      };
+    });
+
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      coords,
+      origin: { d: lOrigin, dot: dOrigin },
+      roast: { d: lRoast, dot: dRoast },
+      notes: { d: lNotes, dot: dNotes },
+      tags
+    };
+  });
+
+  // (b) Bean Rain halfway at 1920x1080 (progress 0.50)
+  console.log('Scrolling to Bean Rain halfway (1920x1080)...');
+  await scrollToSectionProgress('bean-rain', 0.50);
+  await new Promise(r => setTimeout(r, 1200));
   const beanRainHalfwayFps = await measureFps();
   const beanRainHalfwayPath = path.join(artifactDir, 'bean_rain_halfway.png');
   await page.screenshot({ path: beanRainHalfwayPath });
   console.log(`Bean Rain halfway captured: ${beanRainHalfwayFps} FPS -> ${beanRainHalfwayPath}`);
 
-  // 4. Bean rain at its fullest (a: targetY = 9300)
-  console.log('Scrolling to Bean Rain at its fullest (y=9300)...');
-  await scrollToY(9300);
+  // (a) Bean Rain at its fullest at 1920x1080 (progress 0.70)
+  console.log('Scrolling to Bean Rain at its fullest (1920x1080)...');
+  await scrollToSectionProgress('bean-rain', 0.70);
+  await new Promise(r => setTimeout(r, 1200));
   const beanRainFullestFps = await measureFps();
   const beanRainFullestPath = path.join(artifactDir, 'bean_rain_fullest.png');
   await page.screenshot({ path: beanRainFullestPath });
   console.log(`Bean Rain at fullest captured: ${beanRainFullestFps} FPS -> ${beanRainFullestPath}`);
 
-  // Check metrics & DOM inspection
-  const domInspection = await page.evaluate(() => {
+  // Inspect Bean Rain headline skew at rest and subline
+  const beanRainInspection = await page.evaluate(() => {
+    const wrap = document.querySelector('.bean-rain-headline-wrap');
     const lineLeft = document.querySelector('.line-left');
     const lineRight = document.querySelector('.line-right');
     const subline = document.querySelector('.bean-rain-subline');
     const fgCanvas = document.getElementById('webgl-beans-fg');
 
-    const lRect = lineLeft ? lineLeft.getBoundingClientRect() : null;
-    const rRect = lineRight ? lineRight.getBoundingClientRect() : null;
     const sRect = subline ? subline.getBoundingClientRect() : null;
 
     return {
+      headlineWrapTransform: wrap ? window.getComputedStyle(wrap).transform : null,
+      subline: {
+        text: subline?.textContent,
+        fontSize: subline ? window.getComputedStyle(subline).fontSize : null,
+        opacity: subline ? window.getComputedStyle(subline).opacity : null,
+        top: sRect?.top,
+        left: sRect?.left,
+        bottom: sRect?.bottom
+      },
       lineLeft: {
-        text: lineLeft ? lineLeft.textContent : null,
-        fontFamily: lineLeft ? window.getComputedStyle(lineLeft).fontFamily : null,
-        fontSize: lineLeft ? window.getComputedStyle(lineLeft).fontSize : null,
-        color: lineLeft ? window.getComputedStyle(lineLeft).color : null,
-        left: lRect ? lRect.left : null,
-        right: lRect ? lRect.right : null,
-        width: lRect ? lRect.width : null
+        text: lineLeft?.textContent,
+        color: lineLeft ? window.getComputedStyle(lineLeft).color : null
       },
       lineRight: {
-        text: lineRight ? lineRight.textContent : null,
-        fontFamily: lineRight ? window.getComputedStyle(lineRight).fontFamily : null,
-        fontSize: lineRight ? window.getComputedStyle(lineRight).fontSize : null,
-        color: lineRight ? window.getComputedStyle(lineRight).color : null,
-        fontStyle: lineRight ? window.getComputedStyle(lineRight).fontStyle : null,
-        left: rRect ? rRect.left : null,
-        right: rRect ? rRect.right : null,
-        width: rRect ? rRect.width : null
+        text: lineRight?.textContent,
+        color: lineRight ? window.getComputedStyle(lineRight).color : null
       },
-      subline: {
-        text: subline ? subline.textContent : null,
-        fontSize: subline ? window.getComputedStyle(subline).fontSize : null,
-        top: sRect ? sRect.top : null
-      },
-      fgCanvas: {
-        display: fgCanvas ? window.getComputedStyle(fgCanvas).display : null,
-        zIndex: fgCanvas ? window.getComputedStyle(fgCanvas).zIndex : null
-      }
+      fgCanvasDisplay: fgCanvas ? window.getComputedStyle(fgCanvas).display : null
+    };
+  });
+
+  // --- PART B: 1366x768 CAPTURE ---
+  console.log('Resizing to 1366x768 and capturing Exploded View...');
+  await page.setViewport({ width: 1366, height: 768 });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('resize'));
+    if (window.ScrollTrigger) window.ScrollTrigger.refresh();
+  });
+  await new Promise(r => setTimeout(r, 1200));
+
+  await scrollToSectionProgress('exploded', 0.68);
+  await new Promise(r => setTimeout(r, 1200));
+  const exploded768Fps = await measureFps();
+  const exploded768Path = path.join(artifactDir, 'exploded_view_1366x768.png');
+  await page.screenshot({ path: exploded768Path });
+  console.log(`Exploded View (1366x768) captured: ${exploded768Fps} FPS -> ${exploded768Path}`);
+
+  const explodedInspection768 = await page.evaluate(() => {
+    const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      coords
     };
   });
 
   await browser.close();
 
-  const report = {
+  const finalReport = {
     fps: {
-      explodedView: explodedFps,
+      exploded1080: exploded1080Fps,
+      exploded768: exploded768Fps,
       beanRainHalfway: beanRainHalfwayFps,
       beanRainFullest: beanRainFullestFps
     },
     screenshots: {
-      explodedView: explodedPath,
+      exploded1080: exploded1080Path,
+      exploded768: exploded768Path,
       beanRainHalfway: beanRainHalfwayPath,
       beanRainFullest: beanRainFullestPath
     },
-    domInspection,
+    explodedInspection1080,
+    explodedInspection768,
+    beanRainInspection,
     consoleErrors,
-    consoleMessages
+    consoleMessagesCount: consoleMessages.length
   };
 
-  console.log('---FINAL REPORT JSON---');
-  console.log(JSON.stringify(report, null, 2));
+  console.log('---REPORT_START---');
+  console.log(JSON.stringify(finalReport, null, 2));
+  console.log('---REPORT_END---');
 }
 
 run().catch(err => {

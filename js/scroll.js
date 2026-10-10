@@ -142,7 +142,7 @@ export class EmberScroll {
     }, 0.75);
 
     // ----------------------------------------------------
-    // 3. Exploded View (Cup separates along Y, SVG leader lines)
+    // 3. Exploded View (Cup separates along Y, dynamic 3D projected SVG leader lines & layer tags)
     // ----------------------------------------------------
     const explodedTl = gsap.timeline({
       scrollTrigger: {
@@ -151,43 +151,175 @@ export class EmberScroll {
         end: '+=160%',
         pin: true,
         scrub: 1.0,
-        anticipatePin: 1
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          const p = self.progress;
+          // Separation completes at p = 0.45 so layers reach final position before lines draw
+          const separationProgress = Math.min(p / 0.45, 1.0);
+          window.emberStage?.setExplodedScrub?.(separationProgress);
+
+          // Real-time dynamic projection from 3D layer meshes to screen pixel coordinates
+          const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
+          if (coords) {
+            // 1. ORIGIN leader line (Left -> Crema disc left edge)
+            const originEl = document.getElementById('label-origin');
+            if (originEl) {
+              const r = originEl.getBoundingClientRect();
+              const x1 = r.right + 12;
+              const y1 = r.top + r.height / 2;
+              const x2 = coords.cremaLeft.x;
+              const y2 = coords.cremaLeft.y;
+              const line = document.getElementById('line-origin');
+              const dot = document.getElementById('dot-origin');
+              if (line) {
+                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                const len = Math.hypot(x2 - x1, y2 - y1);
+                line.style.strokeDasharray = `${len}`;
+                if (p < 0.45) {
+                  line.style.strokeDashoffset = `${len}`;
+                } else if (p >= 0.70) {
+                  line.style.strokeDashoffset = '0';
+                } else {
+                  const frac = (p - 0.45) / 0.25;
+                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
+                }
+              }
+              if (dot) {
+                dot.setAttribute('cx', x2);
+                dot.setAttribute('cy', y2);
+              }
+            }
+
+            // 2. ROAST leader line (Right -> Coffee disc right edge)
+            const roastEl = document.getElementById('label-roast');
+            if (roastEl) {
+              const r = roastEl.getBoundingClientRect();
+              const x1 = r.left - 12;
+              const y1 = r.top + r.height / 2;
+              const x2 = coords.coffeeRight.x;
+              const y2 = coords.coffeeRight.y;
+              const line = document.getElementById('line-roast');
+              const dot = document.getElementById('dot-roast');
+              if (line) {
+                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                const len = Math.hypot(x2 - x1, y2 - y1);
+                line.style.strokeDasharray = `${len}`;
+                if (p < 0.45) {
+                  line.style.strokeDashoffset = `${len}`;
+                } else if (p >= 0.70) {
+                  line.style.strokeDashoffset = '0';
+                } else {
+                  const frac = (p - 0.45) / 0.25;
+                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
+                }
+              }
+              if (dot) {
+                dot.setAttribute('cx', x2);
+                dot.setAttribute('cy', y2);
+              }
+            }
+
+            // 3. NOTES leader line (Left -> Cup body left edge)
+            const notesEl = document.getElementById('label-notes');
+            if (notesEl) {
+              const r = notesEl.getBoundingClientRect();
+              const x1 = r.right + 12;
+              const y1 = r.top + r.height / 2;
+              const x2 = coords.cupLeft.x;
+              const y2 = coords.cupLeft.y;
+              const line = document.getElementById('line-notes');
+              const dot = document.getElementById('dot-notes');
+              if (line) {
+                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                const len = Math.hypot(x2 - x1, y2 - y1);
+                line.style.strokeDasharray = `${len}`;
+                if (p < 0.45) {
+                  line.style.strokeDashoffset = `${len}`;
+                } else if (p >= 0.70) {
+                  line.style.strokeDashoffset = '0';
+                } else {
+                  const frac = (p - 0.45) / 0.25;
+                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
+                }
+              }
+              if (dot) {
+                dot.setAttribute('cx', x2);
+                dot.setAttribute('cy', y2);
+              }
+            }
+
+            // Update 5 Layer Name Tags: 20px tick line + 4px dot on layer edge
+            const setLayerTag = (id, x, y, dir) => {
+              const tick = document.getElementById(`tick-${id}`);
+              const dot = document.getElementById(`dot-${id}`);
+              const text = document.getElementById(`tag-${id}`);
+              if (tick && dot && text) {
+                dot.setAttribute('cx', x);
+                dot.setAttribute('cy', y);
+                tick.setAttribute('x1', x);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', x + dir * 20);
+                tick.setAttribute('y2', y);
+                text.setAttribute('x', x + dir * 28);
+                text.setAttribute('y', y);
+                text.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
+              }
+            };
+
+            // Spoon: right side
+            setLayerTag('spoon', coords.spoonRight.x, coords.spoonRight.y, 1);
+            // Crema: right side (opposite 01 ORIGIN on left)
+            setLayerTag('crema', coords.cremaRight.x, coords.cremaRight.y, 1);
+            // Coffee: left side (opposite 02 ROAST on right)
+            setLayerTag('coffee', coords.coffeeLeft.x, coords.coffeeLeft.y, -1);
+            // Cup: right side (opposite 03 NOTES on left)
+            setLayerTag('cup', coords.cupRight.x, coords.cupRight.y, 1);
+            // Saucer: right side
+            setLayerTag('saucer', coords.saucerRight.x, coords.saucerRight.y, 1);
+          }
+        }
       }
     });
 
-    // Animate 3D mesh vertical separation
-    explodedTl.to({ p: 0 }, {
-      p: 1,
-      ease: 'power3.inOut',
-      duration: 1.0,
-      onUpdate: function() {
-        window.emberStage?.setExplodedScrub?.(this.targets()[0].p);
-      }
-    }, 0);
+    // Layer name tags fade in during separation
+    explodedTl.to('.tag-tick, .tag-dot, .exploded-tag-text', {
+      opacity: 1,
+      ease: 'power2.out',
+      duration: 0.30
+    }, 0.15);
 
-    // Draw 3 SVG leader lines with stroke-dashoffset and 6px dots
-    explodedTl.to('.line-origin', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.10)
-              .to('.dot-origin', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.22)
-              .to('#label-origin', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.12)
-              
-              .to('.line-roast', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.20)
-              .to('.dot-roast', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.32)
-              .to('#label-roast', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.22)
-              
-              .to('.line-notes', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.30)
-              .to('.dot-notes', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.42)
-              .to('#label-notes', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.32);
+    // Draw story leader lines, reveal 6px ember dots, and reveal story labels AFTER layers reach final positions (p >= 0.45)
+    explodedTl.to('.line-origin, .line-roast, .line-notes', {
+      opacity: 1,
+      ease: 'power2.out',
+      duration: 0.25
+    }, 0.45)
+    .to('.dot-origin, .dot-roast, .dot-notes', {
+      opacity: 1,
+      ease: 'power2.out',
+      duration: 0.18
+    }, 0.52)
+    .to('#label-origin, #label-roast, #label-notes', {
+      opacity: 1,
+      y: 0,
+      ease: 'expo.out',
+      duration: 0.22,
+      stagger: 0.05
+    }, 0.48);
 
     // Fade out exploded view before bean rain
     explodedTl.to(['.exploded-svg-layer', '.exploded-label'], {
       opacity: 0,
       ease: 'power3.inOut',
-      duration: 0.2
-    }, 0.9);
+      duration: 0.12
+    }, 0.88);
 
     // ----------------------------------------------------
-    // 4. Bean Rain (State 3: 400 beans spiral into ring, solid headlines, depth interleaved)
+    // 4. Bean Rain (State 3: 400 beans spiral into clean ring, solid headlines, rest-zero skew)
     // ----------------------------------------------------
+    gsap.set('.bean-rain-headline-wrap', { skewY: 0, rotation: 0 });
+
+    let skewDebounce;
     const beanRainTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#bean-rain',
@@ -202,30 +334,52 @@ export class EmberScroll {
           const clampedSkew = gsap.utils.clamp(-4, 4, v);
           gsap.to('.bean-rain-headline-wrap', {
             skewY: clampedSkew,
-            duration: 0.2,
+            duration: 0.15,
+            ease: 'power1.out',
+            overwrite: 'auto'
+          });
+
+          // Ease back to 0 when scrolling stops (at rest headline is perfectly horizontal)
+          clearTimeout(skewDebounce);
+          skewDebounce = setTimeout(() => {
+            gsap.to('.bean-rain-headline-wrap', {
+              skewY: 0,
+              duration: 0.35,
+              ease: 'power2.out',
+              overwrite: 'auto'
+            });
+          }, 60);
+
+          // Update bean vortex scrub
+          window.emberStage?.setBeanRainScrub?.(self.progress);
+        },
+        onScrubComplete: () => {
+          gsap.to('.bean-rain-headline-wrap', {
+            skewY: 0,
+            duration: 0.25,
+            ease: 'power2.out',
             overwrite: 'auto'
           });
         }
       }
     });
 
-    // Animate 400 instanced beans falling & spiraling into ring vortex
-    beanRainTl.to({ p: 0 }, {
-      p: 1,
-      ease: 'power3.inOut',
-      duration: 1.0,
-      onUpdate: function() {
-        window.emberStage?.setBeanRainScrub?.(this.targets()[0].p);
-      }
-    }, 0);
-
-    // Subline fade and rise
-    beanRainTl.to('.bean-rain-subline', {
+    // Subline fade in at 0.25, and fade out before cup rises at 0.72
+    beanRainTl.fromTo('.bean-rain-subline', {
+      opacity: 0,
+      y: 20
+    }, {
       opacity: 1,
       y: 0,
-      ease: 'expo.out',
-      duration: 0.5
-    }, 0.3);
+      ease: 'power2.out',
+      duration: 0.25
+    }, 0.25)
+    .to('.bean-rain-subline', {
+      opacity: 0,
+      y: -15,
+      ease: 'power2.in',
+      duration: 0.15
+    }, 0.72);
   }
 
   setupMobileTimelines() {
