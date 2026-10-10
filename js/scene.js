@@ -54,6 +54,13 @@ export class EmberScene {
     this.beanSimData = [];
     this.activeDrinkIndex = 0;
     
+    // Reusable 3D helpers
+    this._reusableDummy = new THREE.Object3D();
+    this._zeroDummy = new THREE.Object3D();
+    this._zeroDummy.scale.set(0, 0, 0);
+    this._zeroDummy.updateMatrix();
+    this._reusableVec = new THREE.Vector3();
+
     // Scrub States
     this.scrub = {
       heroScale: 0.70,
@@ -143,6 +150,7 @@ export class EmberScene {
     this.createSteam();
     this.createInstancedBeans();
     this.createProcessObjects();
+    this.initRadialBlurPass();
 
     // 5. Event Listeners
     this.bindEvents();
@@ -321,6 +329,7 @@ export class EmberScene {
       uniform vec3 uColorEdge;
       uniform vec3 uColor;
       uniform float uRipple;
+      uniform float uShockwave;
       varying vec2 vUv;
       varying vec3 vWorldPosition;
 
@@ -332,8 +341,9 @@ export class EmberScene {
         float angle = atan(uv.y, uv.x);
         float swirl = sin(angle * 3.0 + dist * 7.0 - uTime * 0.4) * 0.025;
         
-        // Concentric ripples reacting dynamically to scroll velocity
-        float ripple = sin(dist * 32.0 - uTime * 3.0) * (0.02 + uRipple * 0.06);
+        // Concentric ripples reacting dynamically to scroll velocity + expanding shockwave rings
+        float shockwave = sin(dist * 38.0 - uShockwave * 26.0) * exp(-dist * 2.8) * smoothstep(0.0, 0.15, uShockwave) * (1.0 - smoothstep(0.85, 1.0, uShockwave)) * 0.09;
+        float ripple = sin(dist * 32.0 - uTime * 3.0) * (0.02 + uRipple * 0.06) + shockwave;
 
         float gradT = clamp((dist + swirl + ripple) / 0.48, 0.0, 1.0);
         gradT = smoothstep(0.0, 1.0, gradT);
@@ -367,7 +377,8 @@ export class EmberScene {
         uColorCenter: { value: new THREE.Color(0xc68a52) },
         uColorEdge: { value: new THREE.Color(0x8a5a35) },
         uColor: { value: new THREE.Color(0x2a1208) },
-        uRipple: { value: 0.0 }
+        uRipple: { value: 0.0 },
+        uShockwave: { value: 0.0 }
       }
     });
 
@@ -879,6 +890,64 @@ export class EmberScene {
     this.processGroup.add(this.processDropletMesh);
   }
 
+  initRadialBlurPass() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const maxDpr = width >= 1440 ? 1.5 : 2.0;
+    const dpr = Math.min(window.devicePixelRatio, maxDpr);
+
+    this.blurTarget = new THREE.WebGLRenderTarget(Math.floor(width * dpr), Math.floor(height * dpr), {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat
+    });
+
+    this.blurCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.blurMaterial = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uStrength;
+        uniform vec2 uCenter;
+        varying vec2 vUv;
+
+        void main() {
+          if (uStrength <= 0.001) {
+            gl_FragColor = texture2D(tDiffuse, vUv);
+            return;
+          }
+          vec2 dir = vUv - uCenter;
+          vec4 sum = vec4(0.0);
+          for (int i = 0; i < 8; i++) {
+            float s = 1.0 - uStrength * (float(i) / 7.0);
+            sum += texture2D(tDiffuse, uCenter + dir * s);
+          }
+          gl_FragColor = sum / 8.0;
+        }
+      `,
+      uniforms: {
+        tDiffuse: { value: null },
+        uStrength: { value: 0.0 },
+        uCenter: { value: new THREE.Vector2(0.5, 0.5) }
+      },
+      depthWrite: false,
+      depthTest: false
+    });
+
+    this.blurQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.blurMaterial);
+    this.blurScene = new THREE.Scene();
+    this.blurScene.add(this.blurQuad);
+
+    this.lastFrameTimes = [];
+    this.currentFPS = 60;
+  }
+
   bindEvents() {
     this.onResize = this.onResize.bind(this);
     this.onMouseMove = this.onMouseMove.bind(this);
@@ -901,6 +970,11 @@ export class EmberScene {
     if (this.fgRenderer) {
       this.fgRenderer.setSize(width, height);
       this.fgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
+    }
+
+    if (this.blurTarget) {
+      const dpr = Math.min(window.devicePixelRatio, maxDpr);
+      this.blurTarget.setSize(Math.floor(width * dpr), Math.floor(height * dpr));
     }
   }
 
@@ -927,6 +1001,9 @@ export class EmberScene {
     this.scrub.cupPosY = -1.14 + progress * 0.28;
 
     if (this.foamMesh) this.foamMesh.visible = false;
+    if (this.coffeeMesh) this.coffeeMesh.visible = false;
+    if (this.spoonMesh) this.spoonMesh.visible = false;
+    if (this.liquidMesh) this.liquidMesh.visible = true;
     if (this.beanRainRim) this.beanRainRim.intensity = 0.0;
     if (this.beanRainKey) this.beanRainKey.intensity = 0.0;
     this.renderer.toneMappingExposure = 1.15;
@@ -947,7 +1024,11 @@ export class EmberScene {
     this.scrub.diveProgress = progress;
     this.scrub.scrollVelocity = velocity;
 
-    if (this.foamMesh) this.foamMesh.visible = false;
+    const enteringExploded = progress > 0.85;
+    if (this.foamMesh) this.foamMesh.visible = enteringExploded;
+    if (this.coffeeMesh) this.coffeeMesh.visible = enteringExploded;
+    if (this.spoonMesh) this.spoonMesh.visible = enteringExploded;
+    if (this.liquidMesh) this.liquidMesh.visible = !enteringExploded;
     if (this.beanRainRim) this.beanRainRim.intensity = 0.0;
     if (this.beanRainKey) this.beanRainKey.intensity = 0.0;
     this.renderer.toneMappingExposure = 1.15;
@@ -960,16 +1041,65 @@ export class EmberScene {
     }
 
     // Camera dollies down into crema (0 to 0.65), then pulls back for Exploded (0.65 to 1.0)
-    if (progress <= 0.65) {
-      const p = progress / 0.65;
-      this.scrub.cameraZ = 6.1 - p * 3.1;
-      this.scrub.cameraY = 0.25 - p * 0.35;
-      this.scrub.cameraLookY = -0.38 - p * 0.20;
+    if (progress <= 0.40) {
+      // Phase 2: 0 to 40%:
+      // Cup tilts forward ~65° (1.134 rad) so crema faces camera
+      // Camera FOV 40 to 75 with ease-in dolly toward crema
+      const t = progress / 0.40;
+      const easeDolly = t * t;
+      this.camera.fov = THREE.MathUtils.lerp(40, 75, easeDolly);
+      this.camera.updateProjectionMatrix();
+
+      this.scrub.heroTiltX = THREE.MathUtils.lerp(0.26, 1.134, t);
+      this.scrub.heroTiltZ = THREE.MathUtils.lerp(-0.13, 0.0, t);
+      this.scrub.heroScale = THREE.MathUtils.lerp(1.12, 1.45, easeDolly);
+      this.scrub.cupPosY = THREE.MathUtils.lerp(-0.86, -0.65, easeDolly);
+
+      this.scrub.cameraZ = THREE.MathUtils.lerp(6.1, 2.2, easeDolly);
+      this.scrub.cameraY = THREE.MathUtils.lerp(0.25, -0.65, easeDolly);
+      this.scrub.cameraLookY = THREE.MathUtils.lerp(-0.38, -0.65, easeDolly);
+
+      if (this.cremaMaterial && this.cremaMaterial.uniforms.uShockwave) {
+        this.cremaMaterial.uniforms.uShockwave.value = 0.0;
+      }
+    } else if (progress <= 0.65) {
+      // Phase 2: 40 to 65%:
+      // Crema fills screen, ripple shockwave rings expand from centre of crema
+      this.camera.fov = 75;
+      this.camera.updateProjectionMatrix();
+
+      this.scrub.heroTiltX = 1.134;
+      this.scrub.heroTiltZ = 0.0;
+      this.scrub.heroScale = 1.45;
+      this.scrub.cupPosY = -0.65;
+
+      this.scrub.cameraZ = 2.2;
+      this.scrub.cameraY = -0.65;
+      this.scrub.cameraLookY = -0.65;
+
+      const shockwaveT = (progress - 0.40) / 0.25;
+      if (this.cremaMaterial && this.cremaMaterial.uniforms.uShockwave) {
+        this.cremaMaterial.uniforms.uShockwave.value = shockwaveT;
+      }
     } else {
+      // Phase 2: 65 to 100%:
+      // Camera pulls back and up to 3/4 overhead angle of exploded view
       const p = (progress - 0.65) / 0.35;
-      this.scrub.cameraZ = 3.0 + p * 3.1;
-      this.scrub.cameraY = -0.10 + p * 0.35;
-      this.scrub.cameraLookY = -0.58 + p * 0.20;
+      this.camera.fov = THREE.MathUtils.lerp(75, 36, p);
+      this.camera.updateProjectionMatrix();
+
+      this.scrub.cameraZ = THREE.MathUtils.lerp(2.2, 6.1, p);
+      this.scrub.cameraY = THREE.MathUtils.lerp(-0.65, 0.40, p);
+      this.scrub.cameraLookY = THREE.MathUtils.lerp(-0.65, -0.10, p);
+
+      this.scrub.heroTiltX = THREE.MathUtils.lerp(1.134, 0.245, p);
+      this.scrub.heroTiltZ = 0.0;
+      this.scrub.heroScale = THREE.MathUtils.lerp(1.45, 0.58, p);
+      this.scrub.cupPosY = THREE.MathUtils.lerp(-0.65, -0.06, p);
+
+      if (this.cremaMaterial && this.cremaMaterial.uniforms.uShockwave) {
+        this.cremaMaterial.uniforms.uShockwave.value = 0.0;
+      }
     }
 
     // Ripple shader reacts to velocity
@@ -1001,47 +1131,39 @@ export class EmberScene {
 
     if (!this.cupMesh || !this.saucerMesh) return;
 
-    // Tilt camera ~18° down on stack: camera at Y=0.40 looking at Y=-0.10, layers tilted 14° on X
-    // Discs show their top faces as open ellipses, reading as caramel crema shader & dark glossy coffee disc
-    this.scrub.cameraZ = 6.1;
+    this.camera.fov = 36;
+    this.camera.updateProjectionMatrix();
+
     this.scrub.cameraY = 0.40;
     this.scrub.cameraLookY = -0.10;
-
     this.scrub.heroTiltZ = 0.0;
     this.scrub.heroTiltX = 0.245; // ~14 degrees on X
     this.scrub.cupPosY = -0.06;
-    this.scrub.heroScale = 0.58; // Scaled up ~20% (0.50 -> 0.58) to use empty vertical space
+    this.scrub.heroScale = 0.58; // Scaled up ~20% (0.50 -> 0.58)
 
-    // Direct synchronization to avoid any lerp lag
     this.cupGroup.scale.set(0.58, 0.58, 0.58);
     this.cupGroup.position.set(0, -0.06, 0);
     this.cupGroup.rotation.set(0.245, 0, 0);
-    this.camera.position.set(0, 0.40, 6.1);
-    this.camera.lookAt(0, -0.10, 0);
 
-    // 5 Layers separation along Y centre line with even gaps (all 4 gaps ~0.45 - 0.52):
-    // Spoon:   0.55 -> +1.86
-    // Crema:   0.52 -> +1.34
-    // Coffee:  0.50 -> +0.82
-    // Cup:     0.0  -> -0.30 (rim at +0.38, foot at -0.95)
-    // Saucer:  0.0  -> -1.38 (visible front rim at -1.38)
+    // Pacing: 0 to 25% separation with power3.out easing: 1 - (1 - p)^3
+    const p = Math.min(Math.max(progress, 0.0), 1.0);
+    const easedP = 1.0 - Math.pow(1.0 - p, 3.0);
 
-    const p = progress;
-    this.saucerMesh.position.y = -p * 1.38;
-    if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83 - p * 1.38;
+    this.saucerMesh.position.y = -easedP * 1.38;
+    if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83 - easedP * 1.38;
 
-    this.cupMesh.position.y = -p * 0.30;
+    this.cupMesh.position.y = -easedP * 0.30;
 
     if (this.coffeeMesh) {
-      this.coffeeMesh.position.y = THREE.MathUtils.lerp(0.50, 0.82, p);
+      this.coffeeMesh.position.y = THREE.MathUtils.lerp(0.50, 0.82, easedP);
     }
 
     if (this.foamMesh) {
-      this.foamMesh.position.y = THREE.MathUtils.lerp(0.52, 1.34, p);
+      this.foamMesh.position.y = THREE.MathUtils.lerp(0.52, 1.34, easedP);
     }
 
     if (this.spoonMesh) {
-      this.spoonMesh.position.y = THREE.MathUtils.lerp(0.55, 1.86, p);
+      this.spoonMesh.position.y = THREE.MathUtils.lerp(0.55, 1.86, easedP);
       this.spoonMesh.position.x = 0;
     }
 
@@ -1599,11 +1721,18 @@ export class EmberScene {
         this.cupGroup.scale.set(currentScale, currentScale, currentScale);
 
         if (this.scrub.explodedProgress > 0.005) {
-          // Exploded view: lock directly to scrub values for precise projection
+          // Exploded view: camera slowly orbits +-8 degrees, layers slowly turn
+          const orbitAngle = Math.sin(elapsedTime * 0.45) * 0.14; // +-8 deg
           this.cupGroup.rotation.set(this.scrub.heroTiltX, 0, this.scrub.heroTiltZ);
           this.cupGroup.position.set(0, this.scrub.cupPosY, 0);
-          this.camera.position.set(0, this.scrub.cameraY, this.scrub.cameraZ);
+          this.camera.position.set(Math.sin(orbitAngle) * 6.1, this.scrub.cameraY, Math.cos(orbitAngle) * 6.1);
           this.camera.lookAt(0, this.scrub.cameraLookY, 0);
+
+          if (this.spoonMesh) this.spoonMesh.rotation.y = elapsedTime * 0.18;
+          if (this.foamMesh) this.foamMesh.rotation.y = elapsedTime * -0.14;
+          if (this.coffeeMesh) this.coffeeMesh.rotation.y = elapsedTime * 0.16;
+          if (this.cupMesh) this.cupMesh.rotation.y = elapsedTime * -0.09;
+          if (this.saucerMesh) this.saucerMesh.rotation.y = elapsedTime * 0.07;
         } else {
           // Hero / Dive float & roll
           const isHero = this.scrub.sectionMode === 'hero';
@@ -1759,10 +1888,36 @@ export class EmberScene {
       }
     }
 
-    // 3. Render Frame
+    // Track FPS
+    const now = performance.now();
+    if (!this.lastFrameTimes) this.lastFrameTimes = [];
+    this.lastFrameTimes.push(now);
+    while (this.lastFrameTimes.length > 0 && this.lastFrameTimes[0] < now - 1000) {
+      this.lastFrameTimes.shift();
+    }
+    this.currentFPS = this.lastFrameTimes.length;
+
+    // 3. Render Frame with Radial Zoom Blur enabled ONLY during transitions (Hero -> Dive, Dive -> Exploded)
+    const isTransitioning = this.scrub.sectionMode === 'dive' && (this.scrub.diveProgress < 0.40 || this.scrub.diveProgress > 0.65);
+    const vel = Math.abs(this.scrub.scrollVelocity || 0);
+    const blurStrength = (isTransitioning && vel > 0.05 && this.currentFPS >= 55) ? Math.min(vel * 0.12, 0.18) : 0.0;
+    this.scrub.scrollVelocity *= 0.88;
+    if (Math.abs(this.scrub.scrollVelocity) < 0.001) this.scrub.scrollVelocity = 0;
+
     if (this.scrub.sectionMode !== 'atmosphere') {
-      this.renderer.render(this.scene, this.camera);
+      if (blurStrength > 0.002 && this.blurTarget && this.blurScene && this.blurCamera) {
+        this.renderer.setRenderTarget(this.blurTarget);
+        this.renderer.render(this.scene, this.camera);
+        this.renderer.setRenderTarget(null);
+        this.blurMaterial.uniforms.tDiffuse.value = this.blurTarget.texture;
+        this.blurMaterial.uniforms.uStrength.value = blurStrength;
+        this.renderer.render(this.blurScene, this.blurCamera);
+      } else {
+        this.renderer.setRenderTarget(null);
+        this.renderer.render(this.scene, this.camera);
+      }
     } else {
+      this.renderer.setRenderTarget(null);
       this.renderer.clear();
     }
 

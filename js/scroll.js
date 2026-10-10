@@ -50,7 +50,7 @@ export class EmberScroll {
       scrollTrigger: {
         trigger: '#hero',
         start: 'top top',
-        end: '+=130%',
+        end: '+=90%',
         pin: true,
         scrub: 0.8,
         anticipatePin: 1,
@@ -78,13 +78,6 @@ export class EmberScroll {
           .to('#char-e2', { xPercent: 28,  opacity: 0.58, ease: 'power3.inOut', duration: 1.0 }, 0)
           .to('#char-r',  { xPercent: 50,  opacity: 0.62, ease: 'power3.inOut', duration: 1.0 }, 0);
 
-    // Wordmark container stays visible throughout State 1, fading only when moving to Dive
-    heroTl.to('.hero-wordmark-container', {
-      opacity: 0,
-      ease: 'power3.inOut',
-      duration: 0.25
-    }, 0.85);
-
     // ----------------------------------------------------
     // 2. Dive (State 2: Camera dollies into crema, ripple reacts to velocity)
     // ----------------------------------------------------
@@ -92,7 +85,7 @@ export class EmberScroll {
       scrollTrigger: {
         trigger: '#dive',
         start: 'top top',
-        end: '+=150%',
+        end: '+=90%',
         pin: true,
         scrub: 0.8,
         anticipatePin: 1,
@@ -103,50 +96,59 @@ export class EmberScroll {
           const velocity = self.getVelocity() / 400;
           window.emberStage?.setDiveScrub?.(self.progress, velocity);
         },
-        onLeave: () => gsap.set('.dive-fade-overlay', { opacity: 0 }),
-        onLeaveBack: () => gsap.set('.dive-fade-overlay', { opacity: 0 })
+        onLeave: () => gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 }),
+        onLeaveBack: () => gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 })
       }
     });
 
-    // Dark atmospheric vignette overlay: warm caramel/espresso gradient, never pure black
+    // Phase 2: 0 to 35% of dive: each EMBER letter flies outward past camera on its own track
+    // (scale up to ~3.5x, fading as it passes the lens)
+    diveTl.to('#char-e1', { xPercent: -180, yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
+          .to('#char-m',  { xPercent: -90,  yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
+          .to('#char-b',  { xPercent: 0,    yPercent: -85, scale: 3.8, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
+          .to('#char-e2', { xPercent: 90,   yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
+          .to('#char-r',  { xPercent: 180,  yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
+          .to('.hero-wordmark-container', { opacity: 0, duration: 0.05 }, 0.35);
+
+    // Warm atmospheric caramel/espresso vignette overlay, never pure black
     diveTl.to('.dive-fade-overlay', {
-      opacity: 0.65,
+      opacity: 0.50,
       ease: 'power2.inOut',
-      duration: 0.35
-    }, 0.05)
+      duration: 0.25
+    }, 0.30)
     .to('.dive-fade-overlay', {
       opacity: 0,
       ease: 'power2.inOut',
-      duration: 0.30
+      duration: 0.15
     }, 0.65);
 
     // Masked line-by-line reveal for "Look closer. The crema is a map."
-    // Enters cleanly at 0.12-0.20 and holds for at least 35vh of scroll with a slow parallax drift
+    // Enters cleanly at 0.30-0.42 and holds for at least 35vh of scroll with a slow parallax drift
     diveTl.fromTo('.line-text-1', {
       yPercent: 110
     }, {
       yPercent: 0,
       ease: 'power3.out',
-      duration: 0.20
-    }, 0.12)
+      duration: 0.10
+    }, 0.30)
     .fromTo('.line-text-2', {
       yPercent: 110
     }, {
       yPercent: 0,
       ease: 'power3.out',
-      duration: 0.20
-    }, 0.18)
+      duration: 0.10
+    }, 0.36)
     .to('.dive-headline', {
-      y: -24,
+      y: -30,
       ease: 'none',
-      duration: 0.55
-    }, 0.20)
+      duration: 0.45
+    }, 0.36)
     .to('.dive-headline', {
       opacity: 0,
-      y: -40,
+      y: -50,
       ease: 'power2.in',
-      duration: 0.15
-    }, 0.80);
+      duration: 0.12
+    }, 0.84);
 
     // ----------------------------------------------------
     // 3. Exploded View (Cup separates along Y, dynamic 3D projected SVG leader lines & layer tags)
@@ -155,23 +157,26 @@ export class EmberScroll {
       scrollTrigger: {
         trigger: '#exploded',
         start: 'top top',
-        end: '+=160%',
+        end: '+=150%',
         pin: true,
         scrub: 0.8,
         anticipatePin: 1,
-        onEnter: () => window.emberStage?.setExplodedScrub?.(0),
+        onEnter: () => {
+          gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
+          window.emberStage?.setExplodedScrub?.(0);
+        },
         onEnterBack: () => window.emberStage?.setExplodedScrub?.(1),
         onUpdate: (self) => {
           if (!self.isActive) return;
           const p = self.progress;
-          // Separation completes at p = 0.45 so layers reach final position before lines draw
-          const separationProgress = Math.min(p / 0.45, 1.0);
+          // Phase 2: 0 to 25% separation (power3.out internally handled in setExplodedScrub)
+          const separationProgress = Math.min(p / 0.25, 1.0);
           window.emberStage?.setExplodedScrub?.(separationProgress);
 
           // Real-time dynamic projection from 3D layer meshes to screen pixel coordinates
           const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
           if (coords) {
-            // 1. ORIGIN leader line (Left -> Crema disc left edge)
+            // 1. ORIGIN leader line (Left -> Crema disc left edge): draws across 25% to 45%
             const originEl = document.getElementById('label-origin');
             if (originEl) {
               const r = originEl.getBoundingClientRect();
@@ -185,12 +190,12 @@ export class EmberScroll {
                 line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
                 const len = Math.hypot(x2 - x1, y2 - y1);
                 line.style.strokeDasharray = `${len}`;
-                if (p < 0.45) {
+                if (p < 0.25) {
                   line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.70) {
+                } else if (p >= 0.45) {
                   line.style.strokeDashoffset = '0';
                 } else {
-                  const frac = (p - 0.45) / 0.25;
+                  const frac = (p - 0.25) / 0.20;
                   line.style.strokeDashoffset = `${len * (1 - frac)}`;
                 }
               }
@@ -200,7 +205,7 @@ export class EmberScroll {
               }
             }
 
-            // 2. ROAST leader line (Right -> Coffee disc right edge)
+            // 2. ROAST leader line (Right -> Coffee disc right edge): draws across 45% to 65%
             const roastEl = document.getElementById('label-roast');
             if (roastEl) {
               const r = roastEl.getBoundingClientRect();
@@ -216,10 +221,10 @@ export class EmberScroll {
                 line.style.strokeDasharray = `${len}`;
                 if (p < 0.45) {
                   line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.70) {
+                } else if (p >= 0.65) {
                   line.style.strokeDashoffset = '0';
                 } else {
-                  const frac = (p - 0.45) / 0.25;
+                  const frac = (p - 0.45) / 0.20;
                   line.style.strokeDashoffset = `${len * (1 - frac)}`;
                 }
               }
@@ -229,7 +234,7 @@ export class EmberScroll {
               }
             }
 
-            // 3. NOTES leader line (Left -> Cup body left edge)
+            // 3. NOTES leader line (Left -> Cup body left edge): draws across 65% to 85%
             const notesEl = document.getElementById('label-notes');
             if (notesEl) {
               const r = notesEl.getBoundingClientRect();
@@ -243,12 +248,12 @@ export class EmberScroll {
                 line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
                 const len = Math.hypot(x2 - x1, y2 - y1);
                 line.style.strokeDasharray = `${len}`;
-                if (p < 0.45) {
+                if (p < 0.65) {
                   line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.70) {
+                } else if (p >= 0.85) {
                   line.style.strokeDashoffset = '0';
                 } else {
-                  const frac = (p - 0.45) / 0.25;
+                  const frac = (p - 0.65) / 0.20;
                   line.style.strokeDashoffset = `${len * (1 - frac)}`;
                 }
               }
@@ -291,38 +296,41 @@ export class EmberScroll {
       }
     });
 
-    // Layer name tags fade in during separation
+    // Layer name tags fade in during separation (0 to 0.25)
     explodedTl.to('.tag-tick, .tag-dot, .exploded-tag-text', {
       opacity: 1,
       ease: 'power2.out',
-      duration: 0.30
-    }, 0.15);
+      duration: 0.15
+    }, 0.10);
 
-    // Draw story leader lines, reveal 6px ember dots, and reveal story labels AFTER layers reach final positions (p >= 0.45)
-    explodedTl.to('.line-origin, .line-roast, .line-notes', {
-      opacity: 1,
-      ease: 'power2.out',
-      duration: 0.25
-    }, 0.45)
-    .to('.dot-origin, .dot-roast, .dot-notes', {
-      opacity: 1,
-      ease: 'power2.out',
-      duration: 0.18
-    }, 0.52)
-    .to('#label-origin, #label-roast, #label-notes', {
+    // Draw story leader lines and reveal labels in turn across 25% to 85% hold:
+    // Label 1: ORIGIN (0.25 to 0.45)
+    explodedTl.to('#label-origin, .line-origin, .dot-origin', {
       opacity: 1,
       y: 0,
-      ease: 'expo.out',
-      duration: 0.22,
-      stagger: 0.05
-    }, 0.48);
-
-    // Fade out exploded view before bean rain
-    explodedTl.to(['.exploded-svg-layer', '.exploded-label'], {
+      ease: 'power2.out',
+      duration: 0.12
+    }, 0.25)
+    // Label 2: ROAST (0.45 to 0.65)
+    .to('#label-roast, .line-roast, .dot-roast', {
+      opacity: 1,
+      y: 0,
+      ease: 'power2.out',
+      duration: 0.12
+    }, 0.45)
+    // Label 3: NOTES (0.65 to 0.85)
+    .to('#label-notes, .line-notes, .dot-notes', {
+      opacity: 1,
+      y: 0,
+      ease: 'power2.out',
+      duration: 0.12
+    }, 0.65)
+    // 85% to 100% hold before dissolve; fade out labels at 0.92
+    .to(['.exploded-svg-layer', '.exploded-label'], {
       opacity: 0,
       ease: 'power3.inOut',
-      duration: 0.12
-    }, 0.88);
+      duration: 0.08
+    }, 0.92);
 
     // ----------------------------------------------------
     // 4. Bean Rain (State 3: 400 beans spiral into clean ring, solid headlines, rest-zero skew)
