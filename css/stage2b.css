@@ -51,113 +51,212 @@
   margin: 0;
 }
 
-.menu-cards-track-wrap {
-  width: 100%;
-  max-width: 100%;
-  height: 640px;
-  position: relative;
-  overflow: hidden; /* Constrains cards cleanly to the left zone */
-  display: flex;
-  align-items: center;
-  padding: 10px 0;
-}
-
-.menu-cards-track {
-  display: flex;
-  gap: 0;
-  position: absolute;
-  left: 20px;
-  will-change: transform;
-}
-
-.menu-card {
-  width: 420px;
-  min-width: 420px;
-  height: 600px;
-  margin-right: -60px; /* Overlap by 60px */
-  background: #1c130d;
-  border: 1px solid rgba(255, 220, 190, 0.15);
-  border-radius: 0px; /* Sharp corners */
-  padding: 44px 38px;
-  box-sizing: border-box;
+/* Tasting Turntable Showcase (Left) */
+.turntable-showcase {
+  pointer-events: auto;
+  max-width: 580px;
+  margin-top: auto;
+  margin-bottom: auto;
+  z-index: 12;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-shadow: -10px 0 36px rgba(0, 0, 0, 0.65);
-  cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
-  will-change: transform;
-  transform-origin: center bottom;
+  gap: 16px;
+  position: relative;
 }
 
-/* Alternating +4° and -4° rotation */
-.menu-card-0 { transform: rotate(-4deg); z-index: 1; }
-.menu-card-1 { transform: rotate(4deg); z-index: 2; }
-.menu-card-2 { transform: rotate(-4deg); z-index: 3; }
-.menu-card-3 { transform: rotate(4deg); z-index: 4; }
-.menu-card-4 { transform: rotate(-4deg); z-index: 5; }
-
-.menu-card:hover,
-.menu-card.is-active {
-  border-color: rgba(224, 84, 31, 0.7);
-  box-shadow: -14px 0 44px rgba(224, 84, 31, 0.22), 0 20px 48px rgba(0, 0, 0, 0.8);
+.drink-numeral-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  position: relative;
 }
 
-.card-numeral {
+.active-drink-num {
   font-family: var(--font-display);
   font-optical-sizing: none;
   font-variation-settings: "opsz" 11;
   font-weight: 800;
-  font-size: clamp(64px, 5.5vw, 84px);
-  line-height: 1;
+  font-size: clamp(160px, 15vw, 280px);
+  line-height: 0.85;
   color: var(--color-crema);
   -webkit-text-stroke: 0.015em var(--color-crema);
+  letter-spacing: -0.05em;
+  user-select: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
 
-.card-body {
-  margin: auto 0;
+.active-drink-serving-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: rgba(224, 84, 31, 0.18);
+  border: 1px solid rgba(224, 84, 31, 0.6);
+  color: var(--color-ember);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  text-transform: uppercase;
+  align-self: flex-start;
+  backdrop-filter: blur(8px);
 }
 
-.card-drink-name {
+.active-drink-name {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 56px;
-  line-height: 1.1;
+  font-size: clamp(48px, 4.5vw, 72px);
+  line-height: 1.05;
   color: var(--color-crema);
-  margin: 0 0 14px 0;
-}
-
-.card-drink-desc {
-  font-family: var(--font-body);
-  font-size: 17px;
-  line-height: 1.5;
-  color: rgba(241, 230, 211, 0.75);
   margin: 0;
+  letter-spacing: -0.02em;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.card-footer {
+.active-drink-desc {
+  font-family: var(--font-body);
+  font-size: clamp(18px, 1.25vw, 22px);
+  line-height: 1.5;
+  color: rgba(241, 230, 211, 0.8);
+  margin: 0;
+  max-width: 480px;
+  transition: opacity 0.3s ease;
+}
+
+.active-drink-price-wrap {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid rgba(255, 220, 190, 0.12);
-  padding-top: 18px;
-}
-
-.card-price {
+  align-items: baseline;
+  gap: 4px;
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: clamp(28px, 2.2vw, 36px);
   font-weight: 700;
-  color: #E0541F;
-  letter-spacing: 0.05em;
+  color: var(--color-ember);
+  margin-top: 8px;
+  overflow: hidden;
+  height: 1.3em;
 }
 
-.card-liquid-dot {
+.price-currency {
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.price-val {
+  display: inline-block;
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: rgba(241, 230, 211, 0.6);
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.menu-scroll-hint svg {
   width: 14px;
   height: 14px;
+  stroke: var(--color-ember);
+  animation: hintBounce 2s infinite ease-in-out;
+}
+
+@keyframes hintBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
+/* Right Edge Navigation Rail (5 Ticks 01-05) */
+.turntable-rail {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+.rail-tick {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  text-align: left;
+  opacity: 0.45;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  outline: none;
+}
+
+.rail-tick:hover,
+.rail-tick.is-active {
+  opacity: 1;
+  transform: translateX(-4px);
+}
+
+.rail-tick-line {
+  width: 24px;
+  height: 1px;
+  background: rgba(241, 230, 211, 0.3);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.rail-tick.is-active .rail-tick-line {
+  width: 44px;
+  background: var(--color-ember);
+}
+
+.rail-tick-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 220, 190, 0.35);
-  box-shadow: 0 0 8px currentColor;
+  background: rgba(241, 230, 211, 0.4);
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.rail-tick.is-active .rail-tick-dot {
+  background: var(--color-ember);
+  transform: scale(1.6);
+  box-shadow: 0 0 10px var(--color-ember);
+}
+
+.rail-tick-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--color-crema);
+  font-weight: 700;
+}
+
+.rail-tick-name {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--color-crema);
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.3s ease, max-width 0.35s ease;
+}
+
+.rail-tick:hover .rail-tick-name,
+.rail-tick.is-active .rail-tick-name {
+  opacity: 0.9;
+  max-width: 180px;
+  margin-left: 4px;
 }
 
 /* ----------------------------------------------------
@@ -702,27 +801,29 @@
    ---------------------------------------------------- */
 @media (max-width: 768px) {
   .menu-content-pin {
-    padding: 80px 24px;
+    padding: 80px 24px 32px;
   }
 
-  .menu-cards-track-wrap {
-    width: 100%;
+  .turntable-rail {
+    display: none;
+  }
+
+  .turntable-showcase {
+    margin-top: 45vh;
     max-width: 100%;
-    height: auto;
+    gap: 12px;
   }
 
-  .menu-cards-track {
-    position: relative;
-    flex-direction: column;
-    gap: 32px;
+  .active-drink-num {
+    font-size: clamp(100px, 22vw, 150px);
   }
 
-  .menu-card {
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    margin-right: 0;
-    transform: none !important;
+  .active-drink-name {
+    font-size: clamp(36px, 8vw, 48px);
+  }
+
+  .active-drink-desc {
+    font-size: 16px;
   }
 
   .process-steps-container {

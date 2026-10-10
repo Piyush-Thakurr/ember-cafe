@@ -427,90 +427,170 @@ export class EmberScroll {
       duration: 0.06
     }, 0.80);
     // ----------------------------------------------------
-    // 5. Menu ("The Signature Five")
-    // Horizontal strip of 5 tall cards inside left ~65%
-    // 3D cup pinned in right third, driven by centered card or hover
     // ----------------------------------------------------
-    const cardsTrack = document.getElementById('menu-cards-track');
-    const cardsWrap = document.querySelector('.menu-cards-track-wrap');
-    const cards = gsap.utils.toArray('.menu-card');
+    // 5. Menu ("The Tasting Turntable")
+    // Pinned, 320vh (about 64vh per drink)
+    // ----------------------------------------------------
+    const menuSection = document.getElementById('menu');
+    const numEl = document.getElementById('active-drink-num');
+    const servingEl = document.getElementById('active-drink-serving');
+    const nameEl = document.getElementById('active-drink-name');
+    const descEl = document.getElementById('active-drink-desc');
+    const priceEl = document.getElementById('active-drink-price');
+    const hintEl = document.getElementById('menu-scroll-hint');
+    const railTicks = gsap.utils.toArray('.rail-tick');
 
-    if (cardsTrack && cardsWrap && cards.length) {
-      const getScrollAmount = () => -(cardsTrack.scrollWidth - cardsWrap.clientWidth + 80);
+    const drinksData = [
+      {
+        num: '01',
+        name: 'Ember Espresso',
+        desc: 'Dark cocoa, orange peel, a long finish.',
+        price: 120,
+        serving: 'HOT',
+        liquid: '#2A1208'
+      },
+      {
+        num: '02',
+        name: 'Cortado Noir',
+        desc: 'Espresso and steamed milk in equal parts. Silk and smoke.',
+        price: 160,
+        serving: 'HOT',
+        liquid: '#8A5A35'
+      },
+      {
+        num: '03',
+        name: 'Burnt Caramel Latte',
+        desc: 'Torched sugar, whole milk, a pinch of sea salt.',
+        price: 190,
+        serving: 'HOT',
+        liquid: '#C68A52'
+      },
+      {
+        num: '04',
+        name: 'Cold Drip 18H',
+        desc: 'Steeped for eighteen hours. Clean, bright, dangerously smooth.',
+        price: 210,
+        serving: 'ICED',
+        liquid: '#1B0F0A'
+      },
+      {
+        num: '05',
+        name: 'Ember Tonic',
+        desc: 'Espresso over tonic and citrus. Sparkling, bitter, alive.',
+        price: 200,
+        serving: 'ICED',
+        liquid: '#D9822B'
+      }
+    ];
 
-      const menuTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: '#menu',
-          start: 'top top',
-          end: '+=200%',
-          pin: true,
-          scrub: 1.0,
-          anticipatePin: 1,
-          onEnter: () => window.emberStage?.setMenuScrub?.(0),
-          onEnterBack: () => window.emberStage?.setMenuScrub?.(1),
-          onUpdate: (self) => {
-            if (!self.isActive) return;
-            const p = self.progress;
-            window.emberStage?.setMenuScrub?.(p);
+    let currentDrinkIndex = 0;
+    const priceCounter = { val: 120 };
 
-            // Determine which card is centered in the track wrap
-            const wrapRect = cardsWrap.getBoundingClientRect();
-            const wrapCenter = wrapRect.left + wrapRect.width / 2;
+    const updateMenuDrinkDOM = (index) => {
+      if (index < 0 || index >= drinksData.length) return;
+      const data = drinksData[index];
+      currentDrinkIndex = index;
 
-            let closestIndex = 0;
-            let closestDist = Infinity;
+      if (numEl) numEl.textContent = data.num;
+      if (servingEl) {
+        servingEl.textContent = data.serving;
+        if (data.serving === 'ICED') {
+          servingEl.style.borderColor = 'rgba(120, 180, 255, 0.6)';
+          servingEl.style.color = '#B0D5FF';
+          servingEl.style.background = 'rgba(80, 140, 220, 0.18)';
+        } else {
+          servingEl.style.borderColor = 'rgba(224, 84, 31, 0.6)';
+          servingEl.style.color = 'var(--color-ember)';
+          servingEl.style.background = 'rgba(224, 84, 31, 0.18)';
+        }
+      }
+      if (nameEl) nameEl.textContent = data.name;
+      if (descEl) descEl.textContent = data.desc;
 
-            cards.forEach((card, idx) => {
-              const cardRect = card.getBoundingClientRect();
-              const cardCenter = cardRect.left + cardRect.width / 2;
-              const dist = Math.abs(cardCenter - wrapCenter);
-              if (dist < closestDist) {
-                closestDist = dist;
-                closestIndex = idx;
-              }
-            });
+      // Odometer roll for price
+      if (priceEl) {
+        gsap.to(priceCounter, {
+          val: data.price,
+          duration: 0.45,
+          ease: 'power2.out',
+          roundProps: 'val',
+          onUpdate: () => {
+            priceEl.textContent = priceCounter.val;
+          }
+        });
+      }
 
-            // If user is not currently hovering a card, active center card drives cup
-            if (!this._userHoveringCard) {
-              cards.forEach((card, idx) => {
-                card.classList.toggle('is-active', idx === closestIndex);
-              });
-              if (this._currentActiveDrink !== closestIndex) {
-                this._currentActiveDrink = closestIndex;
-                window.emberStage?.setDrinkActive?.(closestIndex);
-              }
-            }
+      // Update Rail Ticks
+      railTicks.forEach((tick, idx) => {
+        tick.classList.toggle('is-active', idx === index);
+      });
+    };
+
+    if (menuSection) {
+      const menuTrigger = ScrollTrigger.create({
+        trigger: '#menu',
+        start: 'top top',
+        end: '+=320%',
+        pin: true,
+        scrub: 0.8,
+        anticipatePin: 1,
+        onEnter: () => {
+          window.emberStage?.setMenuScrub?.(0);
+          updateMenuDrinkDOM(0);
+        },
+        onEnterBack: () => {
+          window.emberStage?.setMenuScrub?.(1);
+          updateMenuDrinkDOM(4);
+        },
+        onUpdate: (self) => {
+          if (!self.isActive) return;
+          const p = self.progress;
+          window.emberStage?.setMenuScrub?.(p);
+
+          // Pacing across 5 drinks (0 to 0.95): ~0.19 per drink
+          const drinkIdx = Math.min(4, Math.floor(p / 0.19));
+          if (drinkIdx !== currentDrinkIndex && p < 0.95) {
+            updateMenuDrinkDOM(drinkIdx);
+            window.emberStage?.setDrinkActive?.(drinkIdx);
+          }
+
+          // Scroll hint fade out
+          if (hintEl) {
+            hintEl.style.opacity = p > 0.06 ? '0' : '1';
+            hintEl.style.pointerEvents = p > 0.06 ? 'none' : 'auto';
           }
         }
       });
 
-      menuTl.to(cardsTrack, {
-        x: () => getScrollAmount(),
-        ease: 'none',
-        duration: 1.0
+      // Rail tick click handlers
+      railTicks.forEach((tick, idx) => {
+        tick.addEventListener('click', () => {
+          if (menuTrigger) {
+            const start = menuTrigger.start;
+            const totalDistance = menuTrigger.end - menuTrigger.start;
+            const targetP = (idx + 0.4) / 5 * 0.95;
+            const targetScroll = start + targetP * totalDistance;
+            if (this.lenis) {
+              this.lenis.scrollTo(targetScroll, { duration: 1.2 });
+            } else {
+              window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            }
+          }
+        });
       });
 
-      // Individual cards rotateY and scale slightly with progress
-      cards.forEach((card, idx) => {
-        menuTl.to(card, {
-          rotateY: (idx % 2 === 0 ? 8 : -8),
-          scale: 1.02,
-          ease: 'power1.inOut',
-          duration: 1.0
-        }, 0);
-
-        // Hover listener to override cup liquid color
-        card.addEventListener('mouseenter', () => {
-          this._userHoveringCard = true;
-          cards.forEach((c) => c.classList.remove('is-active'));
-          card.classList.add('is-active');
-          this._currentActiveDrink = idx;
-          window.emberStage?.setDrinkActive?.(idx);
-        });
-
-        card.addEventListener('mouseleave', () => {
-          this._userHoveringCard = false;
-        });
+      // Keyboard arrow key controls when menu is in view
+      window.addEventListener('keydown', (e) => {
+        if (!menuTrigger || !menuTrigger.isActive) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const nextIdx = Math.min(4, currentDrinkIndex + 1);
+          railTicks[nextIdx]?.click();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const prevIdx = Math.max(0, currentDrinkIndex - 1);
+          railTicks[prevIdx]?.click();
+        }
       });
     }
 
@@ -705,27 +785,25 @@ export class EmberScroll {
     }, 0)
     .to('.bean-rain-subline', { opacity: 1, y: 0 }, 0.3);
 
-    // Mobile Menu: vertical list of cards
-    const mobileCards = gsap.utils.toArray('.menu-card');
-    mobileCards.forEach((card, idx) => {
+    // Mobile Menu: Tasting Turntable
+    const mobileMenu = document.getElementById('menu');
+    if (mobileMenu) {
       ScrollTrigger.create({
-        trigger: card,
-        start: 'top 60%',
-        end: 'bottom 40%',
-        onEnter: () => {
-          mobileCards.forEach(c => c.classList.remove('is-active'));
-          card.classList.add('is-active');
-          window.emberStage?.setDrinkActive?.(idx);
-          window.emberStage?.setMenuScrub?.(idx / Math.max(1, mobileCards.length - 1));
-        },
-        onEnterBack: () => {
-          mobileCards.forEach(c => c.classList.remove('is-active'));
-          card.classList.add('is-active');
-          window.emberStage?.setDrinkActive?.(idx);
-          window.emberStage?.setMenuScrub?.(idx / Math.max(1, mobileCards.length - 1));
+        trigger: '#menu',
+        start: 'top top',
+        end: '+=200%',
+        pin: true,
+        scrub: 0.8,
+        onUpdate: (self) => {
+          const p = self.progress;
+          window.emberStage?.setMenuScrub?.(p);
+          const drinkIdx = Math.min(4, Math.floor(p / 0.19));
+          if (p < 0.95) {
+            window.emberStage?.setDrinkActive?.(drinkIdx);
+          }
         }
       });
-    });
+    }
 
     // Mobile Process
     const mobileProcessSteps = [

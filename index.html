@@ -193,7 +193,7 @@
       </div>
     </section>
 
-    <!-- Section 5: Menu ("The Signature Five") -->
+    <!-- Section 5: Menu ("The Tasting Turntable") -->
     <section class="section-menu scroll-section" id="menu">
       <div class="menu-content-pin">
         <header class="menu-header">
@@ -201,75 +201,61 @@
           <h2 class="menu-title">The Signature Five</h2>
         </header>
 
-        <div class="menu-cards-track-wrap">
-          <div class="menu-cards-track" id="menu-cards-track">
-            <!-- Card 01: Ember Espresso -->
-            <article class="menu-card menu-card-0" data-drink-index="0" data-liquid="#2A1208">
-              <div class="card-numeral">01</div>
-              <div class="card-body">
-                <h3 class="card-drink-name">Ember Espresso</h3>
-                <p class="card-drink-desc">Dark cocoa, orange peel, a long finish.</p>
-              </div>
-              <div class="card-footer">
-                <span class="card-price">₹120</span>
-                <span class="card-liquid-dot" style="background-color: #2A1208;" aria-hidden="true"></span>
-              </div>
-            </article>
-
-            <!-- Card 02: Cortado Noir -->
-            <article class="menu-card menu-card-1" data-drink-index="1" data-liquid="#8A5A35">
-              <div class="card-numeral">02</div>
-              <div class="card-body">
-                <h3 class="card-drink-name">Cortado Noir</h3>
-                <p class="card-drink-desc">Espresso and steamed milk in equal parts. Silk and smoke.</p>
-              </div>
-              <div class="card-footer">
-                <span class="card-price">₹160</span>
-                <span class="card-liquid-dot" style="background-color: #8A5A35;" aria-hidden="true"></span>
-              </div>
-            </article>
-
-            <!-- Card 03: Burnt Caramel Latte -->
-            <article class="menu-card menu-card-2" data-drink-index="2" data-liquid="#C68A52">
-              <div class="card-numeral">03</div>
-              <div class="card-body">
-                <h3 class="card-drink-name">Burnt Caramel Latte</h3>
-                <p class="card-drink-desc">Torched sugar, whole milk, a pinch of sea salt.</p>
-              </div>
-              <div class="card-footer">
-                <span class="card-price">₹190</span>
-                <span class="card-liquid-dot" style="background-color: #C68A52;" aria-hidden="true"></span>
-              </div>
-            </article>
-
-            <!-- Card 04: Cold Drip 18H -->
-            <article class="menu-card menu-card-3" data-drink-index="3" data-liquid="#1B0F0A">
-              <div class="card-numeral">04</div>
-              <div class="card-body">
-                <h3 class="card-drink-name">Cold Drip 18H</h3>
-                <p class="card-drink-desc">Steeped for eighteen hours. Clean, bright, dangerously smooth.</p>
-              </div>
-              <div class="card-footer">
-                <span class="card-price">₹210</span>
-                <span class="card-liquid-dot" style="background-color: #1B0F0A;" aria-hidden="true"></span>
-              </div>
-            </article>
-
-            <!-- Card 05: Ember Tonic -->
-            <article class="menu-card menu-card-4" data-drink-index="4" data-liquid="#D9822B">
-              <div class="card-numeral">05</div>
-              <div class="card-body">
-                <h3 class="card-drink-name">Ember Tonic</h3>
-                <p class="card-drink-desc">Espresso over tonic and citrus. Sparkling, bitter, alive.</p>
-              </div>
-              <div class="card-footer">
-                <span class="card-price">₹200</span>
-                <span class="card-liquid-dot" style="background-color: #D9822B;" aria-hidden="true"></span>
-              </div>
-            </article>
+        <!-- Active Drink Showcase (Left) -->
+        <div class="turntable-showcase" id="turntable-showcase">
+          <div class="drink-numeral-wrap">
+            <span class="active-drink-num" id="active-drink-num">01</span>
+            <span class="active-drink-serving-pill" id="active-drink-serving">HOT</span>
+          </div>
+          <h3 class="active-drink-name" id="active-drink-name">Ember Espresso</h3>
+          <p class="active-drink-desc" id="active-drink-desc">Dark cocoa, orange peel, a long finish.</p>
+          <div class="active-drink-price-wrap">
+            <span class="price-currency">₹</span>
+            <span class="price-val" id="active-drink-price">120</span>
           </div>
         </div>
+
+        <div class="menu-scroll-hint" id="menu-scroll-hint">
+          <span>Scroll to taste</span>
+          <svg class="scroll-indicator-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 1v10M2 7l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
       </div>
+
+      <!-- Right Edge Navigation Rail (5 Ticks 01-05) -->
+      <nav class="turntable-rail" id="turntable-rail" aria-label="Signature Drinks Navigation">
+        <button class="rail-tick is-active" data-drink-index="0" aria-label="01 Ember Espresso">
+          <span class="rail-tick-line"></span>
+          <span class="rail-tick-dot"></span>
+          <span class="rail-tick-num">01</span>
+          <span class="rail-tick-name">Ember Espresso</span>
+        </button>
+        <button class="rail-tick" data-drink-index="1" aria-label="02 Cortado Noir">
+          <span class="rail-tick-line"></span>
+          <span class="rail-tick-dot"></span>
+          <span class="rail-tick-num">02</span>
+          <span class="rail-tick-name">Cortado Noir</span>
+        </button>
+        <button class="rail-tick" data-drink-index="2" aria-label="03 Burnt Caramel Latte">
+          <span class="rail-tick-line"></span>
+          <span class="rail-tick-dot"></span>
+          <span class="rail-tick-num">03</span>
+          <span class="rail-tick-name">Burnt Caramel Latte</span>
+        </button>
+        <button class="rail-tick" data-drink-index="3" aria-label="04 Cold Drip 18H">
+          <span class="rail-tick-line"></span>
+          <span class="rail-tick-dot"></span>
+          <span class="rail-tick-num">04</span>
+          <span class="rail-tick-name">Cold Drip 18H</span>
+        </button>
+        <button class="rail-tick" data-drink-index="4" aria-label="05 Ember Tonic">
+          <span class="rail-tick-line"></span>
+          <span class="rail-tick-dot"></span>
+          <span class="rail-tick-num">05</span>
+          <span class="rail-tick-name">Ember Tonic</span>
+        </button>
+      </nav>
     </section>
 
     <!-- Section 6: Process ("From seed to second sip") -->

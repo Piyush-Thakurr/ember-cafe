@@ -153,6 +153,7 @@ export class EmberScene {
     this.createSteam();
     this.createInstancedBeans();
     this.createProcessObjects();
+    this.createTurntableMenu();
     this.initRadialBlurPass();
 
     // 5. Event Listeners
@@ -1030,6 +1031,359 @@ export class EmberScene {
     this.processGroup.add(this.processDropletMesh);
   }
 
+  setLayersDissolve(amount) {
+    const alpha = Math.max(0.0, Math.min(1.0, 1.0 - amount));
+    const layers = [this.spoonMesh, this.foamMesh, this.coffeeMesh, this.cupMesh, this.saucerMesh];
+    for (let i = 0; i < layers.length; i++) {
+      const mesh = layers[i];
+      if (mesh && mesh.material) {
+        mesh.material.transparent = true;
+        mesh.material.opacity = alpha;
+        mesh.visible = alpha > 0.01;
+      }
+    }
+  }
+
+  createProceduralDrink4Texture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(256, 256, 30, 256, 256, 360);
+    grad.addColorStop(0, '#3A1F12');
+    grad.addColorStop(0.4, '#1B0F0A');
+    grad.addColorStop(1, '#0C0604');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    ctx.fillStyle = 'rgba(224, 84, 31, 0.12)';
+    ctx.beginPath();
+    ctx.arc(300, 220, 160, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }
+
+  createTurntableMenu() {
+    this.turntableGroup = new THREE.Group();
+    const isMobile = window.innerWidth <= 768;
+    this.turntableGroup.position.set(isMobile ? 0 : 1.85, isMobile ? 1.05 : -0.15, 0);
+    const baseScale = isMobile ? 0.45 : 0.68;
+    this.turntableGroup.scale.set(baseScale, baseScale, baseScale);
+    this.turntableGroup.visible = false;
+    this.scene.add(this.turntableGroup);
+
+    // 1. Podium Base & Ring
+    const podiumGeo = new THREE.CylinderGeometry(1.75, 1.85, 0.18, 48);
+    const podiumMat = new THREE.MeshStandardMaterial({
+      color: 0x1F140E,
+      roughness: 0.45,
+      metalness: 0.15
+    });
+    const podiumMesh = new THREE.Mesh(podiumGeo, podiumMat);
+    podiumMesh.position.y = -1.1;
+    podiumMesh.receiveShadow = true;
+    this.turntableGroup.add(podiumMesh);
+
+    const ringGeo = new THREE.TorusGeometry(1.74, 0.015, 16, 64);
+    ringGeo.rotateX(Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xE0541F });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.y = -1.01;
+    this.turntableGroup.add(ringMesh);
+
+    // 2. Liquid Distortion Background Image Plane
+    const planeGeo = new THREE.PlaneGeometry(16, 10);
+    const texLoader = new THREE.TextureLoader();
+    this.menuDrinkTextures = [
+      texLoader.load('assets/menu/drink-01-ember-espresso.jpg'),
+      texLoader.load('assets/menu/drink-02-cortado-noir.jpg'),
+      texLoader.load('assets/menu/drink-03-burnt-caramel-latte.jpg'),
+      this.createProceduralDrink4Texture(),
+      texLoader.load('assets/menu/drink-05-ember-tonic.jpg')
+    ];
+
+    this.menuBgMat = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uTexCurrent;
+        uniform sampler2D uTexNext;
+        uniform float uTransition;
+        uniform vec2 uVesselPosScreen;
+        uniform vec2 uMouse;
+        uniform float uTime;
+        uniform vec3 uTint;
+        varying vec2 vUv;
+
+        void main() {
+          vec2 uv = vUv;
+          vec2 mDiff = uv - uMouse;
+          float mDist = length(mDiff);
+          float mEffect = exp(-mDist * 4.5) * 0.025;
+          vec2 distort = vec2(
+            sin(uv.y * 14.0 + uTime * 0.9) * 0.007 + mDiff.x * mEffect,
+            cos(uv.x * 14.0 + uTime * 0.9) * 0.007 + mDiff.y * mEffect
+          );
+
+          vec4 colCur = texture2D(uTexCurrent, uv + distort);
+          vec4 colNxt = texture2D(uTexNext, uv + distort);
+
+          float distVessel = length(uv - uVesselPosScreen);
+          float revealRad = uTransition * 1.6;
+          float reveal = smoothstep(revealRad - 0.15, revealRad + 0.02, distVessel);
+
+          vec4 blended = mix(colNxt, colCur, reveal);
+          vec3 warmCol = mix(blended.rgb, uTint, 0.28) * 0.36;
+
+          gl_FragColor = vec4(warmCol, 1.0);
+        }
+      `,
+      uniforms: {
+        uTexCurrent: { value: this.menuDrinkTextures[0] },
+        uTexNext: { value: this.menuDrinkTextures[0] },
+        uTransition: { value: 1.0 },
+        uVesselPosScreen: { value: new THREE.Vector2(0.72, 0.50) },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+        uTime: { value: 0.0 },
+        uTint: { value: new THREE.Color(0x2A1208) }
+      },
+      depthWrite: false
+    });
+
+    this.menuBgPlane = new THREE.Mesh(planeGeo, this.menuBgMat);
+    this.menuBgPlane.position.set(0, 0, -3.2);
+    this.menuBgPlane.visible = false;
+    this.scene.add(this.menuBgPlane);
+
+    // 3. The 5 Procedural Vessels & Effects
+    this.turntableVessels = [];
+    const dummy = new THREE.Object3D();
+
+    // Drink 0: Ember Espresso
+    const v0 = new THREE.Group();
+    const s0Geo = new THREE.CylinderGeometry(1.2, 0.85, 0.07, 32);
+    const s0Mat = new THREE.MeshStandardMaterial({ color: 0x1A1412, roughness: 0.35, metalness: 0.1 });
+    const s0 = new THREE.Mesh(s0Geo, s0Mat);
+    s0.position.y = -0.98;
+    v0.add(s0);
+    const cup0Geo = new THREE.CylinderGeometry(0.74, 0.50, 0.80, 32);
+    const cup0 = new THREE.Mesh(cup0Geo, s0Mat);
+    cup0.position.y = -0.55;
+    v0.add(cup0);
+    const crema0Geo = new THREE.CircleGeometry(0.71, 32);
+    crema0Geo.rotateX(-Math.PI / 2);
+    const crema0Mat = new THREE.MeshStandardMaterial({ color: 0x2A1208, roughness: 0.25, metalness: 0.1 });
+    const crema0 = new THREE.Mesh(crema0Geo, crema0Mat);
+    crema0.position.y = -0.16;
+    v0.add(crema0);
+    // Steam particles
+    const steamGeo = new THREE.SphereGeometry(0.06, 8, 8);
+    const steamMat = new THREE.MeshBasicMaterial({ color: 0xECE1CE, transparent: true, opacity: 0.22 });
+    this.espressoSteam = new THREE.InstancedMesh(steamGeo, steamMat, 14);
+    this.espressoSteamData = [];
+    for (let i = 0; i < 14; i++) {
+      this.espressoSteamData.push({
+        x: (Math.random() - 0.5) * 0.3,
+        y: -0.15 + i * 0.08,
+        z: (Math.random() - 0.5) * 0.3,
+        speed: 0.25 + Math.random() * 0.2
+      });
+      dummy.position.set(0, -10, 0);
+      dummy.updateMatrix();
+      this.espressoSteam.setMatrixAt(i, dummy.matrix);
+    }
+    this.espressoSteam.instanceMatrix.needsUpdate = true;
+    v0.add(this.espressoSteam);
+    this.turntableGroup.add(v0);
+    this.turntableVessels.push(v0);
+
+    // Drink 1: Cortado Noir
+    const v1 = new THREE.Group();
+    const g1Geo = new THREE.CylinderGeometry(0.66, 0.54, 1.15, 32);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.1 });
+    const g1 = new THREE.Mesh(g1Geo, glassMat);
+    g1.position.y = -0.42;
+    v1.add(g1);
+    const espLayerGeo = new THREE.CylinderGeometry(0.58, 0.52, 0.52, 32);
+    const espLayerMat = new THREE.MeshStandardMaterial({ color: 0x2A1208, roughness: 0.3 });
+    const espLayer = new THREE.Mesh(espLayerGeo, espLayerMat);
+    espLayer.position.y = -0.68;
+    v1.add(espLayer);
+    const milkLayerGeo = new THREE.CylinderGeometry(0.63, 0.58, 0.54, 32);
+    const milkLayerMat = new THREE.MeshStandardMaterial({ color: 0xE8DAC8, roughness: 0.4 });
+    const milkLayer = new THREE.Mesh(milkLayerGeo, milkLayerMat);
+    milkLayer.position.y = -0.17;
+    v1.add(milkLayer);
+    const swirlCanvas = document.createElement('canvas');
+    swirlCanvas.width = 256;
+    swirlCanvas.height = 256;
+    const sCtx = swirlCanvas.getContext('2d');
+    const sGrad = sCtx.createRadialGradient(128, 128, 10, 128, 128, 128);
+    sGrad.addColorStop(0, '#2A1208');
+    sGrad.addColorStop(0.35, '#8A5A35');
+    sGrad.addColorStop(0.7, '#E8DAC8');
+    sGrad.addColorStop(1, '#8A5A35');
+    sCtx.fillStyle = sGrad;
+    sCtx.fillRect(0, 0, 256, 256);
+    sCtx.strokeStyle = '#2A1208';
+    sCtx.lineWidth = 6;
+    sCtx.beginPath();
+    sCtx.arc(128, 128, 70, 0.2, Math.PI - 0.2);
+    sCtx.stroke();
+    sCtx.beginPath();
+    sCtx.arc(128, 128, 40, Math.PI + 0.2, Math.PI * 2 - 0.2);
+    sCtx.stroke();
+    const swirlTex = new THREE.CanvasTexture(swirlCanvas);
+    const swirlGeo = new THREE.CircleGeometry(0.61, 32);
+    swirlGeo.rotateX(-Math.PI / 2);
+    const swirlMat = new THREE.MeshStandardMaterial({ map: swirlTex, roughness: 0.4 });
+    this.cortadoSwirlMesh = new THREE.Mesh(swirlGeo, swirlMat);
+    this.cortadoSwirlMesh.position.y = 0.10;
+    v1.add(this.cortadoSwirlMesh);
+    v1.visible = false;
+    this.turntableGroup.add(v1);
+    this.turntableVessels.push(v1);
+
+    // Drink 2: Burnt Caramel Latte
+    const v2 = new THREE.Group();
+    const cup2Geo = new THREE.CylinderGeometry(0.88, 0.50, 0.95, 32);
+    const cup2Mat = new THREE.MeshStandardMaterial({ color: 0x2A1C16, roughness: 0.45 });
+    const cup2 = new THREE.Mesh(cup2Geo, cup2Mat);
+    cup2.position.y = -0.48;
+    v2.add(cup2);
+    const foam2Geo = new THREE.CircleGeometry(0.85, 32);
+    foam2Geo.rotateX(-Math.PI / 2);
+    const foam2Mat = new THREE.MeshStandardMaterial({ color: 0xEAD5C3, roughness: 0.5 });
+    const foam2 = new THREE.Mesh(foam2Geo, foam2Mat);
+    foam2.position.y = -0.01;
+    v2.add(foam2);
+    // Caramel Ribbon
+    const ribbonPts = [];
+    for (let t = 0; t <= 1; t += 0.05) {
+      const angle = t * Math.PI * 4.0;
+      const r = 0.05 + t * 0.48;
+      const y = 1.05 * (1.0 - t) - 0.01;
+      ribbonPts.push(new THREE.Vector3(Math.cos(angle) * r, y, Math.sin(angle) * r));
+    }
+    const ribbonCurve = new THREE.CatmullRomCurve3(ribbonPts);
+    const ribbonGeo = new THREE.TubeGeometry(ribbonCurve, 36, 0.038, 8, false);
+    const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xC68A52, roughness: 0.22, metalness: 0.1 });
+    const ribbonMesh = new THREE.Mesh(ribbonGeo, ribbonMat);
+    v2.add(ribbonMesh);
+    // 24 Sugar Crystals
+    const crystalGeo = new THREE.TetrahedronGeometry(0.045);
+    const crystalMat = new THREE.MeshStandardMaterial({ color: 0xFFD49A, roughness: 0.15, metalness: 0.3 });
+    this.sugarCrystals = new THREE.InstancedMesh(crystalGeo, crystalMat, 24);
+    for (let i = 0; i < 24; i++) {
+      const ang = (i / 24) * Math.PI * 2 + (i % 3) * 0.4;
+      const rad = 0.18 + Math.random() * 0.48;
+      dummy.position.set(Math.cos(ang) * rad, 0.01 + Math.random() * 0.02, Math.sin(ang) * rad);
+      dummy.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      this.sugarCrystals.setMatrixAt(i, dummy.matrix);
+    }
+    this.sugarCrystals.instanceMatrix.needsUpdate = true;
+    v2.add(this.sugarCrystals);
+    v2.visible = false;
+    this.turntableGroup.add(v2);
+    this.turntableVessels.push(v2);
+
+    // Drink 3: Cold Drip 18H
+    const v3 = new THREE.Group();
+    const g3Geo = new THREE.CylinderGeometry(0.65, 0.58, 1.85, 32);
+    const g3 = new THREE.Mesh(g3Geo, glassMat);
+    g3.position.y = -0.08;
+    v3.add(g3);
+    const liq3Geo = new THREE.CylinderGeometry(0.61, 0.56, 1.45, 32);
+    const liq3Mat = new THREE.MeshStandardMaterial({ color: 0x1B0F0A, roughness: 0.2, metalness: 0.2 });
+    const liq3 = new THREE.Mesh(liq3Geo, liq3Mat);
+    liq3.position.y = -0.26;
+    v3.add(liq3);
+    this.iceCubes = [];
+    const iceGeo = new THREE.BoxGeometry(0.32, 0.32, 0.32);
+    const iceMat = new THREE.MeshStandardMaterial({ color: 0xFAFAFA, transparent: true, opacity: 0.52, roughness: 0.08 });
+    for (let i = 0; i < 5; i++) {
+      const cube = new THREE.Mesh(iceGeo, iceMat);
+      const ang = (i / 5) * Math.PI * 2;
+      cube.position.set(Math.cos(ang) * 0.24, 0.20 + (i % 2) * 0.18, Math.sin(ang) * 0.24);
+      cube.rotation.set(0.4 * i, 0.6 * i, 0.3 * i);
+      cube.userData = { basePos: cube.position.clone(), phase: i * 1.2 };
+      v3.add(cube);
+      this.iceCubes.push(cube);
+    }
+    const dropGeo = new THREE.SphereGeometry(0.045, 12, 12);
+    const dropMat = new THREE.MeshStandardMaterial({ color: 0x1B0F0A, roughness: 0.1 });
+    this.coldDripDroplet = new THREE.Mesh(dropGeo, dropMat);
+    this.coldDripDroplet.position.set(0, 1.4, 0);
+    v3.add(this.coldDripDroplet);
+    const rippleGeo = new THREE.RingGeometry(0.02, 0.045, 24);
+    rippleGeo.rotateX(-Math.PI / 2);
+    const rippleMat = new THREE.MeshBasicMaterial({ color: 0xE0541F, transparent: true, opacity: 0 });
+    this.coldDripRipple = new THREE.Mesh(rippleGeo, rippleMat);
+    this.coldDripRipple.position.set(0, 0.46, 0);
+    v3.add(this.coldDripRipple);
+    v3.visible = false;
+    this.turntableGroup.add(v3);
+    this.turntableVessels.push(v3);
+
+    // Drink 4: Ember Tonic
+    const v4 = new THREE.Group();
+    const g4Geo = new THREE.CylinderGeometry(0.64, 0.58, 1.95, 32);
+    const g4 = new THREE.Mesh(g4Geo, glassMat);
+    g4.position.y = -0.02;
+    v4.add(g4);
+    const liq4Geo = new THREE.CylinderGeometry(0.60, 0.55, 1.65, 32);
+    const liq4Mat = new THREE.MeshStandardMaterial({ color: 0xD9822B, roughness: 0.22, metalness: 0.12 });
+    const liq4 = new THREE.Mesh(liq4Geo, liq4Mat);
+    liq4.position.y = -0.16;
+    v4.add(liq4);
+    const bblGeo = new THREE.SphereGeometry(0.02, 6, 6);
+    const bblMat = new THREE.MeshBasicMaterial({ color: 0xFFEEDD, transparent: true, opacity: 0.55 });
+    this.tonicBubbles = new THREE.InstancedMesh(bblGeo, bblMat, 120);
+    this.tonicBubbleData = [];
+    for (let i = 0; i < 120; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * 0.48;
+      this.tonicBubbleData.push({
+        x: Math.cos(ang) * r,
+        y: -0.9 + Math.random() * 1.5,
+        z: Math.sin(ang) * r,
+        speed: 0.35 + Math.random() * 0.4,
+        phase: Math.random() * Math.PI * 2
+      });
+      dummy.position.set(0, -10, 0);
+      dummy.updateMatrix();
+      this.tonicBubbles.setMatrixAt(i, dummy.matrix);
+    }
+    this.tonicBubbles.instanceMatrix.needsUpdate = true;
+    v4.add(this.tonicBubbles);
+    const helixPts = [];
+    for (let t = 0; t <= 1; t += 0.04) {
+      const ang = t * Math.PI * 5.0;
+      const r = 0.56;
+      const y = -0.5 + t * 1.25;
+      helixPts.push(new THREE.Vector3(Math.cos(ang) * r, y, Math.sin(ang) * r));
+    }
+    const helixCurve = new THREE.CatmullRomCurve3(helixPts);
+    const helixGeo = new THREE.TubeGeometry(helixCurve, 32, 0.042, 8, false);
+    const helixMat = new THREE.MeshStandardMaterial({ color: 0xE0541F, roughness: 0.4 });
+    const helixMesh = new THREE.Mesh(helixGeo, helixMat);
+    v4.add(helixMesh);
+    v4.visible = false;
+    this.turntableGroup.add(v4);
+    this.turntableVessels.push(v4);
+  }
+
   initRadialBlurPass() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -1133,6 +1487,8 @@ export class EmberScene {
     this.scrub.sectionMode = 'hero';
     if (this.cupGroup) this.cupGroup.visible = true;
     if (this.processGroup) this.processGroup.visible = false;
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
     if (this.beanMesh) this.beanMesh.visible = true;
 
     this.scrub.heroScale = 0.70 + progress * 0.42; // scales ~1.6x
@@ -1159,6 +1515,8 @@ export class EmberScene {
     this.scrub.sectionMode = 'dive';
     if (this.cupGroup) this.cupGroup.visible = true;
     if (this.processGroup) this.processGroup.visible = false;
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
     if (this.beanMesh) this.beanMesh.visible = true;
 
     this.scrub.diveProgress = progress;
@@ -1254,6 +1612,8 @@ export class EmberScene {
     this.scrub.sectionMode = 'exploded';
     if (this.cupGroup) this.cupGroup.visible = true;
     if (this.processGroup) this.processGroup.visible = false;
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
     this.scrub.explodedProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
       this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
@@ -1422,6 +1782,8 @@ export class EmberScene {
     this.scrub.sectionMode = 'bean-rain';
     this.scrub.explodedProgress = 0.0;
     if (this.processGroup) this.processGroup.visible = false;
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
     if (this.beanMesh) this.beanMesh.visible = true;
     this.scrub.beanRainProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
@@ -1679,45 +2041,56 @@ export class EmberScene {
     this.scrub.sectionMode = 'menu';
     this.scrub.menuProgress = progress;
 
-    // Reset exploded layers back to assembled cup
+    // Reset exploded layers back to assembled cup & hide other sections
     if (this.saucerMesh) this.saucerMesh.position.y = 0;
     if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83;
     if (this.cupMesh) this.cupMesh.position.y = 0;
     if (this.coffeeMesh) this.coffeeMesh.visible = false;
     if (this.foamMesh) this.foamMesh.visible = false;
     if (this.spoonMesh) this.spoonMesh.visible = false;
-    if (this.liquidMesh) this.liquidMesh.visible = true;
+    if (this.liquidMesh) this.liquidMesh.visible = false;
+    if (this.cupGroup) this.cupGroup.visible = false;
 
-    // Cup pinned in right third (~65% left is cards)
-    // On desktop X=1.85, Y=0.0, Z=0.0; on mobile X=0, Y=0.9
-    const isMobile = window.innerWidth <= 768;
-    const targetX = isMobile ? 0 : 1.85;
-    const targetY = isMobile ? 0.9 : 0.0;
-    const targetScale = isMobile ? 0.42 : 0.52;
-
-    if (this.cupGroup) {
-      this.cupGroup.visible = true;
-      this.cupGroup.position.set(targetX, targetY, 0);
-      this.cupGroup.scale.set(targetScale, targetScale, targetScale);
-      // Cards scroll progress causes subtle tilt & rotation
-      this.cupGroup.rotation.x = 0.18 + Math.sin(progress * Math.PI) * 0.05;
-      this.cupGroup.rotation.z = -0.05;
-    }
-
-    // Hide beans or keep very sparse
     if (this.beanMesh) this.beanMesh.visible = false;
     if (this.beanMeshFg) this.beanMeshFg.visible = false;
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
     if (this.processGroup) this.processGroup.visible = false;
 
-    // Camera level
+    // Turntable and background plane active
+    if (this.turntableGroup) {
+      this.turntableGroup.visible = true;
+      const isMobile = window.innerWidth <= 768;
+      const targetX = isMobile ? 0 : 1.85;
+      const baseScale = isMobile ? 0.45 : 0.68;
+
+      if (progress >= 0.95) {
+        // Exit transition: vessel shrinks and rises into Process green bean
+        const tExit = (progress - 0.95) / 0.05;
+        const curScale = THREE.MathUtils.lerp(baseScale, 0.18, tExit);
+        const curY = THREE.MathUtils.lerp(isMobile ? 1.05 : -0.15, 0.85, tExit);
+        this.turntableGroup.scale.set(curScale, curScale, curScale);
+        this.turntableGroup.position.set(targetX, curY, 0);
+      } else {
+        const targetY = (isMobile ? 1.05 : -0.15) + Math.sin(progress * Math.PI) * 0.04;
+        this.turntableGroup.position.set(targetX, targetY, 0);
+        this.turntableGroup.scale.set(baseScale, baseScale, baseScale);
+      }
+    }
+
+    if (this.menuBgPlane) {
+      this.menuBgPlane.visible = progress < 0.98;
+    }
+
     this.camera.position.set(0, 0, 6.1);
     this.camera.lookAt(0, 0, 0);
     this.renderer.toneMappingExposure = 1.15;
   }
 
   setDrinkActive(index) {
+    if (this.activeDrinkIndex === index) return;
+    const oldIndex = this.activeDrinkIndex !== undefined ? this.activeDrinkIndex : 0;
     this.activeDrinkIndex = index;
+
     const drinkColors = [
       '#2A1208', // 01 Ember Espresso
       '#8A5A35', // 02 Cortado Noir
@@ -1728,19 +2101,56 @@ export class EmberScene {
     const hex = drinkColors[index] || '#2A1208';
     this.setLiquidColor(hex);
 
-    // If not in menu mode, immediately activate menu mode
     if (this.scrub.sectionMode !== 'menu') {
       this.setMenuScrub(0);
     }
 
-    // Cup rotates a little (rotateY) on drink change
-    if (this.cupGroup) {
-      const targetRotY = -0.25 + (index - 2) * 0.20;
-      gsap.to(this.cupGroup.rotation, {
-        y: targetRotY,
-        duration: 0.6,
+    // Spin turntable podium 120°
+    if (this.turntableGroup) {
+      gsap.to(this.turntableGroup.rotation, {
+        y: this.turntableGroup.rotation.y + 2.094,
+        duration: 0.85,
         ease: 'power2.out',
         overwrite: 'auto'
+      });
+    }
+
+    // Crossfade / scale transition between vessels
+    if (this.turntableVessels && this.turntableVessels.length === 5) {
+      for (let i = 0; i < 5; i++) {
+        const v = this.turntableVessels[i];
+        if (i === index) {
+          v.visible = true;
+          v.scale.set(0.75, 0.75, 0.75);
+          gsap.to(v.scale, {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+            duration: 0.5,
+            ease: 'back.out(1.4)',
+            overwrite: 'auto'
+          });
+        } else {
+          v.visible = false;
+        }
+      }
+    }
+
+    // Background Image Plane Transition
+    if (this.menuBgMat && this.menuDrinkTextures) {
+      this.menuBgMat.uniforms.uTexCurrent.value = this.menuDrinkTextures[oldIndex] || this.menuDrinkTextures[0];
+      this.menuBgMat.uniforms.uTexNext.value = this.menuDrinkTextures[index] || this.menuDrinkTextures[0];
+      this.menuBgMat.uniforms.uTransition.value = 0.0;
+      gsap.to(this.menuBgMat.uniforms.uTransition, {
+        value: 1.0,
+        duration: 0.75,
+        ease: 'power2.inOut'
+      });
+      gsap.to(this.menuBgMat.uniforms.uTint.value, {
+        r: new THREE.Color(hex).r,
+        g: new THREE.Color(hex).g,
+        b: new THREE.Color(hex).b,
+        duration: 0.75
       });
     }
   }
@@ -1754,6 +2164,8 @@ export class EmberScene {
     if (this.beanMesh) this.beanMesh.visible = false;
     if (this.beanMeshFg) this.beanMeshFg.visible = false;
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
 
     if (!this.processGroup) return;
     this.processGroup.visible = true;
@@ -1855,6 +2267,8 @@ export class EmberScene {
     if (this.processGroup) this.processGroup.visible = false;
     if (this.beanMesh) this.beanMesh.visible = false;
     if (this.beanMeshFg) this.beanMeshFg.visible = false;
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
   }
 
   setFinaleScrub(progress) {
@@ -1865,6 +2279,8 @@ export class EmberScene {
     if (this.beanMesh) this.beanMesh.visible = false;
     if (this.beanMeshFg) this.beanMeshFg.visible = false;
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
+    if (this.turntableGroup) this.turntableGroup.visible = false;
+    if (this.menuBgPlane) this.menuBgPlane.visible = false;
 
     // Assemble cup
     if (this.saucerMesh) this.saucerMesh.position.y = 0;
@@ -1977,13 +2393,90 @@ export class EmberScene {
       }
 
       // Idle rotations for Stage 2B sections
-      if (this.scrub.sectionMode === 'menu' && this.cupGroup) {
-        const isMobile = window.innerWidth <= 768;
-        this.cupGroup.position.x = isMobile ? 0 : 1.85;
-        this.cupGroup.position.y = (isMobile ? 0.9 : 0.0) + Math.sin(elapsedTime * 1.5) * 0.03;
-        const targetScale = isMobile ? 0.42 : 0.52;
-        this.cupGroup.scale.set(targetScale, targetScale, targetScale);
-        this.cupGroup.rotation.y += delta * 0.35;
+      if (this.scrub.sectionMode === 'menu') {
+        const deltaSec = delta;
+        const elapsed = elapsedTime;
+
+        if (this.turntableGroup) {
+          this.turntableGroup.rotation.y += deltaSec * 0.22;
+        }
+
+        if (this.menuBgMat) {
+          this.menuBgMat.uniforms.uTime.value = elapsed;
+          this.menuBgMat.uniforms.uMouse.value.set(
+            this.mouse.x * 0.5 + 0.5,
+            this.mouse.y * 0.5 + 0.5
+          );
+        }
+
+        const activeIdx = this.activeDrinkIndex || 0;
+
+        // Drink 0: Steam animation
+        if (activeIdx === 0 && this.espressoSteam && this.espressoSteamData) {
+          const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+          for (let i = 0; i < this.espressoSteamData.length; i++) {
+            const s = this.espressoSteamData[i];
+            s.y += s.speed * deltaSec;
+            s.x += Math.sin(elapsed * 2.5 + i) * 0.006;
+            if (s.y > 0.85) {
+              s.y = -0.15;
+              s.x = (Math.random() - 0.5) * 0.25;
+            }
+            dummy.position.set(s.x, s.y, s.z);
+            const scale = Math.sin((s.y + 0.15) / 1.0 * Math.PI) * 1.1;
+            dummy.scale.set(scale, scale, scale);
+            dummy.updateMatrix();
+            this.espressoSteam.setMatrixAt(i, dummy.matrix);
+          }
+          this.espressoSteam.instanceMatrix.needsUpdate = true;
+        }
+
+        // Drink 1: Cortado swirl disc rotation
+        if (activeIdx === 1 && this.cortadoSwirlMesh) {
+          this.cortadoSwirlMesh.rotation.z += deltaSec * 0.35;
+        }
+
+        // Drink 3: Cold Drip ice cubes bobbing & falling droplet
+        if (activeIdx === 3 && this.iceCubes) {
+          for (let i = 0; i < this.iceCubes.length; i++) {
+            const cube = this.iceCubes[i];
+            cube.position.y = cube.userData.basePos.y + Math.sin(elapsed * 2.0 + cube.userData.phase) * 0.035;
+            cube.rotation.x += deltaSec * 0.15;
+          }
+          if (this.coldDripDroplet && this.coldDripRipple) {
+            const cycle = (elapsed % 2.0) / 2.0;
+            if (cycle < 0.6) {
+              const t = cycle / 0.6;
+              this.coldDripDroplet.visible = true;
+              this.coldDripDroplet.position.y = THREE.MathUtils.lerp(1.4, 0.46, t * t);
+              this.coldDripRipple.material.opacity = 0;
+            } else {
+              this.coldDripDroplet.visible = false;
+              const t = (cycle - 0.6) / 0.4;
+              const scale = 1.0 + t * 4.5;
+              this.coldDripRipple.scale.set(scale, scale, scale);
+              this.coldDripRipple.material.opacity = (1.0 - t) * 0.7;
+            }
+          }
+        }
+
+        // Drink 4: Tonic bubbles rising
+        if (activeIdx === 4 && this.tonicBubbles && this.tonicBubbleData) {
+          const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+          for (let i = 0; i < this.tonicBubbleData.length; i++) {
+            const b = this.tonicBubbleData[i];
+            b.y += b.speed * deltaSec;
+            b.x += Math.sin(elapsed * 4.0 + b.phase) * 0.003;
+            if (b.y > 0.65) {
+              b.y = -0.9;
+            }
+            dummy.position.set(b.x, b.y, b.z);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            this.tonicBubbles.setMatrixAt(i, dummy.matrix);
+          }
+          this.tonicBubbles.instanceMatrix.needsUpdate = true;
+        }
       } else if (this.scrub.sectionMode === 'process' && this.processBeanMesh && this.processBeanMesh.visible) {
         this.processBeanMesh.rotation.y += delta * 0.40;
         this.processBeanMesh.rotation.x = 0.15 + Math.sin(elapsedTime * 0.6) * 0.08;
