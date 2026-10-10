@@ -517,9 +517,9 @@ export class EmberScene {
     this.beanMesh.castShadow = false;
     this.beanMesh.receiveShadow = false;
 
-    // Optional foreground bean mesh for bean rain (passes in front of DOM text)
+    // Foreground bean mesh for bean rain (passes in front of DOM text)
     if (this.sceneFg) {
-      this.beanMeshFg = new THREE.InstancedMesh(beanGeo, beanMaterial, 200);
+      this.beanMeshFg = new THREE.InstancedMesh(beanGeo, beanMaterial, totalBeans);
       this.beanMeshFg.castShadow = false;
       this.beanMeshFg.receiveShadow = false;
       this.sceneFg.add(this.beanMeshFg);
@@ -536,8 +536,8 @@ export class EmberScene {
 
     this.beanInitialData = [];
 
-    // Base 28vh ring radius (camera FOV 36 deg, Z=6.1 -> 100vh = 3.96 units -> 28vh = 1.11 units)
-    const base28vhRadius = 1.11;
+    // Base 24vh ring radius (FOV 36, Z=6.1 -> 100vh = 3.9639 units -> 24vh = 0.951 units)
+    const base24vhRadius = 0.951;
 
     for (let i = 0; i < totalBeans; i++) {
       let x, y, z, scale;
@@ -584,13 +584,13 @@ export class EmberScene {
       this.beanMesh.setMatrixAt(i, dummy.matrix);
       const color = roastPalette[Math.floor(Math.random() * roastPalette.length)];
       this.beanMesh.setColorAt(i, color);
-      if (this.beanMeshFg && i < 200) {
+      if (this.beanMeshFg) {
         this.beanMeshFg.setColorAt(i, color);
       }
 
-      // Store initial coordinate and vortex targets for Bean Rain (State 3)
+      // Store initial coordinate and vortex targets for Bean Rain (State 3: 24vh radius)
       const ringAngle = (i / totalBeans) * Math.PI * 2.0;
-      const ringRadius = base28vhRadius + ((i % 7) - 3) * 0.045; // Organic band centered at 28vh
+      const ringRadius = base24vhRadius + ((i % 9) - 4) * 0.022; // Organic band centered at 24vh
       const origRadius = Math.sqrt(x * x + y * y);
 
       this.beanInitialData.push({
@@ -609,7 +609,7 @@ export class EmberScene {
 
     if (this.beanMeshFg) {
       const zeroMat = new THREE.Matrix4().makeScale(0, 0, 0);
-      for (let j = 0; j < 200; j++) {
+      for (let j = 0; j < totalBeans; j++) {
         this.beanMeshFg.setMatrixAt(j, zeroMat);
       }
       this.beanMeshFg.instanceMatrix.needsUpdate = true;
@@ -759,6 +759,11 @@ export class EmberScene {
     }
     if (this.foamMesh) this.foamMesh.visible = false;
 
+    // Show/hide foreground canvas (rendered only while bean rain is in view)
+    if (this.fgCanvas) {
+      this.fgCanvas.style.display = progress > 0.01 ? 'block' : 'none';
+    }
+
     // Light the beans in this section: ember rim (#E0541F), crema key (#F1E6D3), tone-mapping exposure +20%
     if (this.beanRainRim) this.beanRainRim.intensity = progress * 3.4;
     if (this.beanRainKey) this.beanRainKey.intensity = progress * 3.8;
@@ -766,6 +771,18 @@ export class EmberScene {
     if (this.fgRenderer) this.fgRenderer.toneMappingExposure = 1.15 * (1.0 + progress * 0.20);
 
     if (!this.beanMesh || !this.beanInitialData.length) return;
+
+    // Reset bean mesh position & rotation so ring is precisely centered
+    this.beanMesh.position.set(0, 0, 0);
+    this.beanMesh.rotation.set(0, 0, 0);
+    if (this.beanMeshFg) {
+      this.beanMeshFg.position.set(0, 0, 0);
+      this.beanMeshFg.rotation.set(0, 0, 0);
+    }
+
+    // Camera transitions smoothly to level (perpendicular to ring plane)
+    this.scrub.cameraY = 0.25 * (1.0 - progress);
+    this.scrub.cameraLookY = -0.38 * (1.0 - progress);
 
     // Cup collapses and recedes smoothly so bean vortex takes center stage
     const cupS = Math.max(0, 0.70 * (1.0 - progress * 1.6));
@@ -789,19 +806,26 @@ export class EmberScene {
     const tempVec = this._reusableVec;
     const count = this.beanInitialData.length;
 
-    let fgCount = 0;
     const spiralTurns = 3.0;
+    // Ring center at 52% of viewport height (camera view height = 3.9639, 2% below center = -0.0793)
+    const targetCenterY = -0.08;
 
     for (let i = 0; i < count; i++) {
       const b = this.beanInitialData[i];
 
-      // Spiral trajectory converging into 28vh ring centered on screen
+      // Spiral trajectory converging into 24vh ring centered at 52% viewport height
       const currentAngle = b.ringAngle + (1.0 - progress) * spiralTurns * Math.PI;
       const currentRadius = THREE.MathUtils.lerp(b.origRadius, b.targetRingRadius, progress);
 
       const currentX = Math.cos(currentAngle) * currentRadius;
-      const currentY = Math.sin(currentAngle) * currentRadius * 0.94;
-      const targetZ = Math.sin(b.ringAngle) * 0.55;
+      const currentY = THREE.MathUtils.lerp(b.origPos.y, targetCenterY + Math.sin(currentAngle) * currentRadius * 0.96, progress);
+
+      // Ring interlocking with text:
+      // Front arc (top-left, over "400 BEANS.") has Z > 0;
+      // Back arc (bottom-right, over "ONE CUP.") has Z < 0.
+      const baseTiltZ = (-Math.cos(currentAngle) + Math.sin(currentAngle)) * 0.7071 * 0.58;
+      const organicZ = ((i % 7) - 3) * 0.06;
+      const targetZ = baseTiltZ + organicZ;
       const currentZ = THREE.MathUtils.lerp(b.origPos.z, targetZ, progress);
 
       tempVec.set(currentX, currentY, currentZ);
@@ -809,36 +833,32 @@ export class EmberScene {
       const rotY = b.origRot.y + progress * Math.PI * 4.0;
       const rotX = b.origRot.x + progress * Math.PI * 2.0;
 
-      // Cap on-screen size: scale clamped <= 0.56 so on-screen size <= 140px
-      const beanScale = Math.min(b.origScale, 0.56);
+      // Cap on-screen size: scale clamped <= 0.54 so on-screen size <= 140px
+      const beanScale = Math.min(b.origScale, 0.54);
 
       dummy.position.copy(tempVec);
       dummy.rotation.set(rotX, rotY, b.origRot.z);
       dummy.scale.set(beanScale, beanScale, beanScale);
       dummy.updateMatrix();
 
-      // Foreground vs background bean distribution
-      if (this.beanMeshFg && progress > 0.15 && currentZ >= 0.05 && fgCount < 200) {
-        // Render on foreground canvas (passes IN FRONT OF text)
-        this.beanMeshFg.setMatrixAt(fgCount, dummy.matrix);
-        fgCount++;
-        // Hide on background canvas
+      // Foreground vs background depth split:
+      // Beans in front of the text plane (currentZ > 0.02) render on the foreground canvas (above text)
+      // Beans behind the text plane (currentZ <= 0.02) render on the background canvas (behind text)
+      if (this.beanMeshFg && progress > 0.08 && currentZ > 0.02) {
+        this.beanMeshFg.setMatrixAt(i, dummy.matrix);
         this.beanMesh.setMatrixAt(i, zeroDummy.matrix);
       } else {
-        // Render on background canvas (passes BEHIND text)
         this.beanMesh.setMatrixAt(i, dummy.matrix);
+        if (this.beanMeshFg) {
+          this.beanMeshFg.setMatrixAt(i, zeroDummy.matrix);
+        }
       }
-    }
-
-    // Hide any unused foreground slots
-    if (this.beanMeshFg) {
-      for (let j = fgCount; j < 200; j++) {
-        this.beanMeshFg.setMatrixAt(j, zeroDummy.matrix);
-      }
-      this.beanMeshFg.instanceMatrix.needsUpdate = true;
     }
 
     this.beanMesh.instanceMatrix.needsUpdate = true;
+    if (this.beanMeshFg) {
+      this.beanMeshFg.instanceMatrix.needsUpdate = true;
+    }
   }
 
   // Liquid color tweening (Stage API)

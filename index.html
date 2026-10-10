@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMBER — Atelier of slow coffee</title>
   
-  <!-- Typography from DESIGN.md (Bodoni Moda, EB Garamond, Space Mono) -->
+  <!-- Typography from DESIGN.md (Bodoni Moda, EB Garamond, Space Mono) + Fallback Display Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./css/tokens.css?v=6">
-  <link rel="stylesheet" href="./css/base.css?v=6">
-  <link rel="stylesheet" href="./css/storyboards.css?v=6">
+  <link rel="stylesheet" href="./css/tokens.css?v=7">
+  <link rel="stylesheet" href="./css/base.css?v=7">
+  <link rel="stylesheet" href="./css/storyboards.css?v=7">
   
   <!-- Pinned Dependencies via Importmap -->
   <script type="importmap">
@@ -66,6 +66,9 @@
   <div id="webgl-canvas-container" aria-hidden="true">
     <canvas id="webgl-canvas"></canvas>
   </div>
+
+  <!-- Fixed Full-Screen WebGL Foreground Canvas Above DOM Text (z-index: 20) -->
+  <canvas id="webgl-beans-fg" aria-hidden="true"></canvas>
 
   <!-- Solid Navigation (Solid #14100D, 1px Hairline, No Blur) -->
   <header class="site-nav">
@@ -122,14 +125,19 @@
     <!-- Section 3: Exploded View -->
     <section class="section-exploded scroll-section" id="exploded">
       <div class="exploded-content-pin">
-        <!-- SVG Leader Lines -->
-        <svg class="exploded-svg-layer" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true">
-          <!-- Line 1: Origin (Top-left to liquid/bean layer) -->
-          <path class="exploded-leader-line line-origin" d="M 280 250 L 580 340" />
-          <!-- Line 2: Roast (Right to cup body) -->
-          <path class="exploded-leader-line line-roast" d="M 1160 460 L 820 480" />
-          <!-- Line 3: Notes (Bottom-left to saucer) -->
-          <path class="exploded-leader-line line-notes" d="M 280 670 L 640 620" />
+        <!-- SVG Leader Lines & Dots -->
+        <svg class="exploded-svg-layer" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
+          <!-- Line 1: Origin (Top-left to foam/crema disc) + 6px dot -->
+          <path class="exploded-leader-line line-origin" d="M 450 260 L 840 285" />
+          <circle class="exploded-leader-dot dot-origin" cx="840" cy="285" r="3" />
+
+          <!-- Line 2: Roast (Right to cup rim/body) + 6px dot -->
+          <path class="exploded-leader-line line-roast" d="M 1470 540 L 1180 575" />
+          <circle class="exploded-leader-dot dot-roast" cx="1180" cy="575" r="3" />
+
+          <!-- Line 3: Notes (Bottom-left to cup body, extending 200px to land on body) + 6px dot -->
+          <path class="exploded-leader-line line-notes" d="M 450 740 L 840 710" />
+          <circle class="exploded-leader-dot dot-notes" cx="840" cy="710" r="3" />
         </svg>
 
         <!-- Labels (Verbatim from content.md) -->
@@ -155,7 +163,6 @@
           <h2 class="bean-rain-line line-left">400 BEANS.</h2>
           <h2 class="bean-rain-line line-right">ONE CUP.</h2>
         </div>
-        <canvas id="webgl-beans-fg" class="bean-rain-fg-canvas" aria-hidden="true"></canvas>
         <p class="bean-rain-subline">We count them so you don't have to.</p>
       </div>
     </section>

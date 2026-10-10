@@ -165,15 +165,18 @@ export class EmberScroll {
       }
     }, 0);
 
-    // Draw 3 SVG leader lines with stroke-dashoffset
-    explodedTl.to('.line-origin', { strokeDashoffset: 0, ease: 'power3.inOut', duration: 0.35 }, 0.15)
-              .to('#label-origin', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.35 }, 0.20)
+    // Draw 3 SVG leader lines with stroke-dashoffset and 6px dots
+    explodedTl.to('.line-origin', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.10)
+              .to('.dot-origin', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.22)
+              .to('#label-origin', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.12)
               
-              .to('.line-roast', { strokeDashoffset: 0, ease: 'power3.inOut', duration: 0.35 }, 0.35)
-              .to('#label-roast', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.35 }, 0.40)
+              .to('.line-roast', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.20)
+              .to('.dot-roast', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.32)
+              .to('#label-roast', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.22)
               
-              .to('.line-notes', { strokeDashoffset: 0, ease: 'power3.inOut', duration: 0.35 }, 0.55)
-              .to('#label-notes', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.35 }, 0.60);
+              .to('.line-notes', { strokeDashoffset: 0, ease: 'power2.out', duration: 0.25 }, 0.30)
+              .to('.dot-notes', { opacity: 1, ease: 'power2.out', duration: 0.15 }, 0.42)
+              .to('#label-notes', { opacity: 1, y: 0, ease: 'expo.out', duration: 0.25 }, 0.32);
 
     // Fade out exploded view before bean rain
     explodedTl.to(['.exploded-svg-layer', '.exploded-label'], {
@@ -183,7 +186,7 @@ export class EmberScroll {
     }, 0.9);
 
     // ----------------------------------------------------
-    // 4. Bean Rain (State 3: 400 beans spiral into ring, outline headlines, text skew)
+    // 4. Bean Rain (State 3: 400 beans spiral into ring, solid headlines, depth interleaved)
     // ----------------------------------------------------
     const beanRainTl = gsap.timeline({
       scrollTrigger: {
@@ -194,9 +197,9 @@ export class EmberScroll {
         scrub: 1.0,
         anticipatePin: 1,
         onUpdate: (self) => {
-          // Velocity-based dynamic text skewing
+          // Velocity-based dynamic text skewing capped at ±4°
           const v = self.getVelocity() / 350;
-          const clampedSkew = gsap.utils.clamp(-6, 6, v);
+          const clampedSkew = gsap.utils.clamp(-4, 4, v);
           gsap.to('.bean-rain-headline-wrap', {
             skewY: clampedSkew,
             duration: 0.2,
