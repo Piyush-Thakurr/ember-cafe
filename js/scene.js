@@ -1,13 +1,17 @@
 import * as THREE from 'three';
+import gsap from 'gsap';
 
 /**
- * EMBER 3D Scene Engine (Stage 2A)
+ * EMBER 3D Scene Engine (Stage 2B)
  * Includes:
  * - 75% procedural cup & saucer with deep charcoal glaze, contact shadow, edge highlights
  * - Separate meshes for Exploded View: cupMesh, saucerMesh, liquidMesh, foamMesh, spoonMesh
  * - Crema shader reacting to scroll velocity
  * - Camera dolly for Dive state
  * - 400 instanced beans with spiral ring vortex state for Bean Rain
+ * - Pinned cup in Menu with active drink liquid color and rotation reaction
+ * - Large 3D Bean in Process (GREEN -> ROAST pulse -> GRIND 300 granules -> BREW thin stream to dark liquid drop)
+ * - Docking 3D cup shrinking into Finale CTA pill
  * - Full Stage API methods for GSAP ScrollTrigger
  */
 
@@ -39,6 +43,15 @@ export class EmberScene {
     // Instanced Beans
     this.beanMesh = null;
     this.beanInitialData = [];
+
+    // Stage 2B: Process 3D Objects
+    this.processGroup = null;
+    this.processBeanMesh = null;
+    this.processBeanMaterial = null;
+    this.processGranulesMesh = null;
+    this.processDropletMesh = null;
+    this.granulesData = [];
+    this.activeDrinkIndex = 0;
     
     // Scrub States
     this.scrub = {
@@ -52,6 +65,10 @@ export class EmberScene {
       diveProgress: 0.0,
       explodedProgress: 0.0,
       beanRainProgress: 0.0,
+      menuProgress: 0.0,
+      processProgress: 0.0,
+      finaleProgress: 0.0,
+      sectionMode: 'hero',
       scrollVelocity: 0.0
     };
     
@@ -124,6 +141,7 @@ export class EmberScene {
     this.createExplodedComponents();
     this.createSteam();
     this.createInstancedBeans();
+    this.createProcessObjects();
 
     // 5. Event Listeners
     this.bindEvents();
@@ -682,6 +700,134 @@ export class EmberScene {
     }
   }
 
+  createProcessObjects() {
+    this.processGroup = new THREE.Group();
+    const isMobile = window.innerWidth <= 768;
+    this.processGroup.position.set(isMobile ? 0 : 1.48, isMobile ? 0.9 : 0.0, 0);
+    this.processGroup.visible = false;
+    this.scene.add(this.processGroup);
+
+    // 1. Large 3D Bean (reuse bean geometry, ~6x scale)
+    const beanGeo = new THREE.SphereGeometry(0.72, 24, 24);
+    const pos = beanGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      let x = pos.getX(i);
+      let y = pos.getY(i);
+      let z = pos.getZ(i);
+
+      y *= 1.42;
+      z *= 0.78;
+
+      if (z > 0.12 && Math.abs(x) < 0.30) {
+        z *= 0.36; // crease down the center
+      }
+
+      pos.setXYZ(i, x, y, z);
+    }
+    beanGeo.computeVertexNormals();
+
+    this.processBeanMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(0x7A9A4A), // Step 1 GREEN #7A9A4A
+      roughness: 0.38,
+      metalness: 0.06
+    });
+
+    this.processBeanMesh = new THREE.Mesh(beanGeo, this.processBeanMaterial);
+    this.processBeanMesh.castShadow = true;
+    this.processGroup.add(this.processBeanMesh);
+
+    // 2. Instanced Granules for Step 3 GRIND (300 granules)
+    const granuleCount = 300;
+    const granuleGeo = new THREE.SphereGeometry(0.045, 8, 8);
+    const granuleMat = new THREE.MeshStandardMaterial({
+      color: 0x4A2A18, // Rich roast ground color
+      roughness: 0.45,
+      metalness: 0.05
+    });
+
+    this.processGranulesMesh = new THREE.InstancedMesh(granuleGeo, granuleMat, granuleCount);
+    this.processGranulesMesh.visible = false;
+    this.granulesData = [];
+
+    const dummy = new THREE.Object3D();
+
+    for (let i = 0; i < granuleCount; i++) {
+      // Points inside bean volume
+      const u = Math.random();
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = Math.cbrt(u) * 0.58;
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta) * 1.35;
+      const z = r * Math.cos(phi) * 0.72;
+
+      // Burst velocity direction
+      const burstVec = new THREE.Vector3(x, y, z).normalize();
+      const burstDist = 0.8 + Math.random() * 1.4;
+
+      // Settled position: scattered flat bed of coffee grounds
+      const settleX = x * 2.2 + (Math.random() - 0.5) * 0.6;
+      const settleY = -0.55 + (Math.random() - 0.5) * 0.35;
+      const settleZ = z * 2.2 + (Math.random() - 0.5) * 0.6;
+
+      // Brew thin stream target: concentrated vertical flow into drop
+      const streamX = (Math.random() - 0.5) * 0.12;
+      const streamZ = (Math.random() - 0.5) * 0.12;
+      const streamY = 0.65 - (i / granuleCount) * 1.5;
+
+      const scale = 0.7 + Math.random() * 0.5;
+
+      dummy.position.set(x, y, z);
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+      this.processGranulesMesh.setMatrixAt(i, dummy.matrix);
+
+      this.granulesData.push({
+        initPos: new THREE.Vector3(x, y, z),
+        burstDir: burstVec,
+        burstDist: burstDist,
+        settlePos: new THREE.Vector3(settleX, settleY, settleZ),
+        streamTarget: new THREE.Vector3(streamX, streamY, streamZ),
+        scale: scale
+      });
+    }
+
+    this.processGranulesMesh.instanceMatrix.needsUpdate = true;
+    this.processGroup.add(this.processGranulesMesh);
+
+    // 3. Liquid Droplet for Step 4 BREW
+    const dropGeo = new THREE.SphereGeometry(0.22, 18, 18);
+    const dropPos = dropGeo.attributes.position;
+    for (let i = 0; i < dropPos.count; i++) {
+      let x = dropPos.getX(i);
+      let y = dropPos.getY(i);
+      let z = dropPos.getZ(i);
+
+      if (y > 0) {
+        const factor = 1.0 - (y / 0.22) * 0.75;
+        x *= factor;
+        z *= factor;
+        y *= 1.45;
+      } else {
+        y *= 0.92;
+      }
+      dropPos.setXYZ(i, x, y, z);
+    }
+    dropGeo.computeVertexNormals();
+
+    const dropMat = new THREE.MeshStandardMaterial({
+      color: 0x1B0F0A, // Dark espresso drop
+      roughness: 0.12,
+      metalness: 0.35
+    });
+
+    this.processDropletMesh = new THREE.Mesh(dropGeo, dropMat);
+    this.processDropletMesh.position.set(0, -0.95, 0);
+    this.processDropletMesh.scale.set(0, 0, 0);
+    this.processDropletMesh.visible = false;
+    this.processGroup.add(this.processDropletMesh);
+  }
+
   bindEvents() {
     this.onResize = this.onResize.bind(this);
     this.onMouseMove = this.onMouseMove.bind(this);
@@ -719,6 +865,11 @@ export class EmberScene {
 
   // State 1: Cup scales ~1 -> 1.6 (base 0.70 -> 1.12), tilts ~ -7.5 deg
   setHeroScrub(progress) {
+    this.scrub.sectionMode = 'hero';
+    if (this.cupGroup) this.cupGroup.visible = true;
+    if (this.processGroup) this.processGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = true;
+
     this.scrub.heroScale = 0.70 + progress * 0.42; // scales ~1.6x
     this.scrub.heroTiltZ = -progress * 0.13;       // -7.5 degrees
     this.scrub.heroTiltX = 0.12 + progress * 0.14; // slight pitch
@@ -737,6 +888,11 @@ export class EmberScene {
 
   // State 2: Camera dollies into crema, ripple reacts to scroll velocity
   setDiveScrub(progress, velocity = 0) {
+    this.scrub.sectionMode = 'dive';
+    if (this.cupGroup) this.cupGroup.visible = true;
+    if (this.processGroup) this.processGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = true;
+
     this.scrub.diveProgress = progress;
     this.scrub.scrollVelocity = velocity;
 
@@ -774,6 +930,9 @@ export class EmberScene {
   // Exploded View: cup components separate along Y centre line with even 0.50 visible gaps
   // Exploded View: camera tilted 18° down, stack scaled up 20%, even layer gaps, 25% dimmed beans
   setExplodedScrub(progress) {
+    this.scrub.sectionMode = 'exploded';
+    if (this.cupGroup) this.cupGroup.visible = true;
+    if (this.processGroup) this.processGroup.visible = false;
     this.scrub.explodedProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
       this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
@@ -947,6 +1106,8 @@ export class EmberScene {
   // Front arc is much sparser than back arc so all letters stay >= 70% visible.
   // Excludes 60px margin around subline.
   setBeanRainScrub(progress) {
+    this.scrub.sectionMode = 'bean-rain';
+    if (this.processGroup) this.processGroup.visible = false;
     this.scrub.beanRainProgress = progress;
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
       this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
@@ -1105,6 +1266,257 @@ export class EmberScene {
     }
   }
 
+  // --- STAGE 2B METHODS ---
+
+  setMenuScrub(progress) {
+    this.scrub.sectionMode = 'menu';
+    this.scrub.menuProgress = progress;
+
+    // Reset exploded layers back to assembled cup
+    if (this.saucerMesh) this.saucerMesh.position.y = 0;
+    if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83;
+    if (this.cupMesh) this.cupMesh.position.y = 0;
+    if (this.coffeeMesh) this.coffeeMesh.visible = false;
+    if (this.foamMesh) this.foamMesh.visible = false;
+    if (this.spoonMesh) this.spoonMesh.visible = false;
+    if (this.liquidMesh) this.liquidMesh.visible = true;
+
+    // Cup pinned in right third (~65% left is cards)
+    // On desktop X=1.85, Y=0.0, Z=0.0; on mobile X=0, Y=0.9
+    const isMobile = window.innerWidth <= 768;
+    const targetX = isMobile ? 0 : 1.85;
+    const targetY = isMobile ? 0.9 : 0.0;
+    const targetScale = isMobile ? 0.42 : 0.52;
+
+    if (this.cupGroup) {
+      this.cupGroup.visible = true;
+      this.cupGroup.position.set(targetX, targetY, 0);
+      this.cupGroup.scale.set(targetScale, targetScale, targetScale);
+      // Cards scroll progress causes subtle tilt & rotation
+      this.cupGroup.rotation.x = 0.18 + Math.sin(progress * Math.PI) * 0.05;
+      this.cupGroup.rotation.z = -0.05;
+    }
+
+    // Hide beans or keep very sparse
+    if (this.beanMesh) this.beanMesh.visible = false;
+    if (this.beanMeshFg) this.beanMeshFg.visible = false;
+    if (this.fgCanvas) this.fgCanvas.style.display = 'none';
+    if (this.processGroup) this.processGroup.visible = false;
+
+    // Camera level
+    this.camera.position.set(0, 0, 6.1);
+    this.camera.lookAt(0, 0, 0);
+    this.renderer.toneMappingExposure = 1.15;
+  }
+
+  setDrinkActive(index) {
+    this.activeDrinkIndex = index;
+    const drinkColors = [
+      '#2A1208', // 01 Ember Espresso
+      '#8A5A35', // 02 Cortado Noir
+      '#C68A52', // 03 Burnt Caramel Latte
+      '#1B0F0A', // 04 Cold Drip 18H
+      '#D9822B'  // 05 Ember Tonic
+    ];
+    const hex = drinkColors[index] || '#2A1208';
+    this.setLiquidColor(hex);
+
+    // If not in menu mode, immediately activate menu mode
+    if (this.scrub.sectionMode !== 'menu') {
+      this.setMenuScrub(0);
+    }
+
+    // Cup rotates a little (rotateY) on drink change
+    if (this.cupGroup) {
+      const targetRotY = -0.25 + (index - 2) * 0.20;
+      gsap.to(this.cupGroup.rotation, {
+        y: targetRotY,
+        duration: 0.6,
+        ease: 'power2.out',
+        overwrite: 'auto'
+      });
+    }
+  }
+
+  setProcessScrub(progress) {
+    this.scrub.sectionMode = 'process';
+    this.scrub.processProgress = progress;
+
+    // Hide cup, beans, fg canvas
+    if (this.cupGroup) this.cupGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = false;
+    if (this.beanMeshFg) this.beanMeshFg.visible = false;
+    if (this.fgCanvas) this.fgCanvas.style.display = 'none';
+
+    if (!this.processGroup) return;
+    this.processGroup.visible = true;
+
+    const isMobile = window.innerWidth <= 768;
+    this.processGroup.position.set(isMobile ? 0 : 1.48, isMobile ? 0.9 : 0.0, 0);
+
+    // Camera level
+    this.camera.position.set(0, 0, 6.1);
+    this.camera.lookAt(0, 0, 0);
+
+    const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+    const colorGreen = new THREE.Color(0x7A9A4A);
+    const colorRoast = new THREE.Color(0x5A3220);
+
+    if (progress < 0.25) {
+      // Step 1: 01 GREEN (#7A9A4A)
+      this.processBeanMesh.visible = true;
+      this.processBeanMesh.scale.set(1.0, 1.0, 1.0);
+      this.processBeanMaterial.color.copy(colorGreen);
+      this.processGranulesMesh.visible = false;
+      this.processDropletMesh.visible = false;
+    } else if (progress < 0.50) {
+      // Step 2: 02 ROAST (#7A9A4A -> #5A3220 with small scale pulse)
+      const t = (progress - 0.25) / 0.25;
+      this.processBeanMesh.visible = true;
+      this.processBeanMaterial.color.lerpColors(colorGreen, colorRoast, t);
+      
+      // Small scale pulse peaking around t=0.5
+      const pulse = 1.0 + Math.sin(t * Math.PI) * 0.16;
+      this.processBeanMesh.scale.set(pulse, pulse, pulse);
+
+      this.processGranulesMesh.visible = false;
+      this.processDropletMesh.visible = false;
+    } else if (progress < 0.75) {
+      // Step 3: 03 GRIND (bean breaks into ~300 granules that scatter and settle)
+      const t = (progress - 0.50) / 0.25;
+      this.processBeanMesh.visible = t < 0.15;
+      if (t < 0.15) {
+        const shrink = 1.0 - (t / 0.15);
+        this.processBeanMesh.scale.set(shrink, shrink, shrink);
+      } else {
+        this.processBeanMesh.scale.set(0, 0, 0);
+      }
+
+      this.processGranulesMesh.visible = true;
+      this.processDropletMesh.visible = false;
+
+      // Scatter and settle granules
+      const burstPeak = Math.sin(Math.min(t * 1.5, 1.0) * Math.PI);
+      for (let i = 0; i < this.granulesData.length; i++) {
+        const g = this.granulesData[i];
+        const curX = THREE.MathUtils.lerp(g.initPos.x + g.burstDir.x * g.burstDist * burstPeak, g.settlePos.x, t);
+        const curY = THREE.MathUtils.lerp(g.initPos.y + g.burstDir.y * g.burstDist * burstPeak, g.settlePos.y, t);
+        const curZ = THREE.MathUtils.lerp(g.initPos.z + g.burstDir.z * g.burstDist * burstPeak, g.settlePos.z, t);
+
+        dummy.position.set(curX, curY, curZ);
+        dummy.scale.set(g.scale, g.scale, g.scale);
+        dummy.rotation.set(curX * 3, curY * 3, curZ * 3);
+        dummy.updateMatrix();
+        this.processGranulesMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.processGranulesMesh.instanceMatrix.needsUpdate = true;
+    } else {
+      // Step 4: 04 BREW (granules fall into thin stream fading into dark liquid drop)
+      const t = (progress - 0.75) / 0.25;
+      this.processBeanMesh.visible = false;
+      this.processGranulesMesh.visible = t < 0.95;
+      this.processDropletMesh.visible = true;
+
+      // Granules fall into stream and fade
+      for (let i = 0; i < this.granulesData.length; i++) {
+        const g = this.granulesData[i];
+        const streamProgress = Math.min((t * 1.3) + (i % 20) * 0.015, 1.0);
+        const curX = THREE.MathUtils.lerp(g.settlePos.x, g.streamTarget.x, streamProgress);
+        const curY = THREE.MathUtils.lerp(g.settlePos.y, g.streamTarget.y - t * 0.8, streamProgress);
+        const curZ = THREE.MathUtils.lerp(g.settlePos.z, g.streamTarget.z, streamProgress);
+
+        const fadeScale = Math.max(0, g.scale * (1.0 - t * 1.1));
+        dummy.position.set(curX, curY, curZ);
+        dummy.scale.set(fadeScale, fadeScale, fadeScale);
+        dummy.rotation.set(0, curY * 4, 0);
+        dummy.updateMatrix();
+        this.processGranulesMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.processGranulesMesh.instanceMatrix.needsUpdate = true;
+
+      // Dark liquid drop grows and gently pulses
+      const dropScale = Math.min(t * 1.3, 1.0);
+      const bobY = -0.95 + Math.sin(t * Math.PI * 4) * 0.04;
+      this.processDropletMesh.scale.set(dropScale, dropScale * 1.1, dropScale);
+      this.processDropletMesh.position.y = bobY;
+    }
+  }
+
+  setAtmosphereScrub(progress) {
+    this.scrub.sectionMode = 'atmosphere';
+    if (this.cupGroup) this.cupGroup.visible = false;
+    if (this.processGroup) this.processGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = false;
+    if (this.beanMeshFg) this.beanMeshFg.visible = false;
+  }
+
+  setFinaleScrub(progress) {
+    this.scrub.sectionMode = 'finale';
+    this.scrub.finaleProgress = progress;
+
+    if (this.processGroup) this.processGroup.visible = false;
+    if (this.beanMesh) this.beanMesh.visible = false;
+    if (this.beanMeshFg) this.beanMeshFg.visible = false;
+    if (this.fgCanvas) this.fgCanvas.style.display = 'none';
+
+    // Assemble cup
+    if (this.saucerMesh) this.saucerMesh.position.y = 0;
+    if (this.cupMesh) this.cupMesh.position.y = 0;
+    if (this.coffeeMesh) this.coffeeMesh.visible = false;
+    if (this.foamMesh) this.foamMesh.visible = false;
+    if (this.spoonMesh) this.spoonMesh.visible = false;
+    if (this.liquidMesh) this.liquidMesh.visible = true;
+
+    if (!this.cupGroup) return;
+    this.cupGroup.visible = true;
+
+    // Find the pill cup target element in the DOM
+    const targetEl = document.getElementById('pill-cup-target');
+    let targetWorldX = 0;
+    let targetWorldY = 0;
+
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // Project into 3D world space at Z=0
+      const ndcX = (centerX / window.innerWidth) * 2 - 1;
+      const ndcY = -(centerY / window.innerHeight) * 2 + 1;
+
+      // Camera FOV 36, Z 6.1
+      const vFOV = (36 * Math.PI) / 180;
+      const halfHeight = Math.tan(vFOV / 2) * 6.1;
+      const halfWidth = halfHeight * (window.innerWidth / window.innerHeight);
+
+      targetWorldX = ndcX * halfWidth;
+      targetWorldY = ndcY * halfHeight;
+    }
+
+    // Shrinks (scrub) from ~0.55 down to ~0.052 (perfect fit inside 48px target circle!)
+    const p = Math.max(0, Math.min(progress, 1.0));
+    const startX = 0;
+    const startY = 0.5;
+    const startScale = 0.55;
+    const endScale = 0.052;
+
+    const curScale = THREE.MathUtils.lerp(startScale, endScale, p);
+    const curX = THREE.MathUtils.lerp(startX, targetWorldX, p);
+    const curY = THREE.MathUtils.lerp(startY, targetWorldY, p);
+
+    this.cupGroup.position.set(curX, curY, 0);
+    this.cupGroup.scale.set(curScale, curScale, curScale);
+    this.cupGroup.rotation.x = 0.24;
+    this.cupGroup.rotation.z = 0.0;
+
+    if (this.steamParticles) {
+      this.steamParticles.visible = p < 0.6;
+    }
+
+    this.camera.position.set(0, 0, 6.1);
+    this.camera.lookAt(0, 0, 0);
+  }
+
   tick() {
     const delta = this.clock.getDelta();
     const elapsedTime = this.clock.getElapsedTime();
@@ -1114,7 +1526,9 @@ export class EmberScene {
       this.mouse.x += (this.mouse.targetX - this.mouse.x) * 0.045;
       this.mouse.y += (this.mouse.targetY - this.mouse.y) * 0.045;
 
-      if (this.cupGroup) {
+      const isHeroMode = ['hero', 'dive', 'exploded'].includes(this.scrub.sectionMode);
+
+      if (this.cupGroup && isHeroMode) {
         const currentScale = this.scrub.heroScale;
         this.cupGroup.scale.set(currentScale, currentScale, currentScale);
 
@@ -1142,8 +1556,23 @@ export class EmberScene {
         }
       }
 
-      // Idle bean drift (only when not scrubbing bean rain to maintain 60 FPS)
-      if (this.beanMesh && this.scrub.beanRainProgress < 0.05) {
+      // Idle rotations for Stage 2B sections
+      if (this.scrub.sectionMode === 'menu' && this.cupGroup) {
+        const isMobile = window.innerWidth <= 768;
+        this.cupGroup.position.x = isMobile ? 0 : 1.85;
+        this.cupGroup.position.y = (isMobile ? 0.9 : 0.0) + Math.sin(elapsedTime * 1.5) * 0.03;
+        const targetScale = isMobile ? 0.42 : 0.52;
+        this.cupGroup.scale.set(targetScale, targetScale, targetScale);
+        this.cupGroup.rotation.y += delta * 0.35;
+      } else if (this.scrub.sectionMode === 'process' && this.processBeanMesh && this.processBeanMesh.visible) {
+        this.processBeanMesh.rotation.y += delta * 0.40;
+        this.processBeanMesh.rotation.x = 0.15 + Math.sin(elapsedTime * 0.6) * 0.08;
+      } else if (this.scrub.sectionMode === 'finale' && this.cupGroup) {
+        this.cupGroup.rotation.y += delta * 0.75;
+      }
+
+      // Idle bean drift (only when in hero/dive to maintain 60 FPS)
+      if (this.beanMesh && isHeroMode && this.scrub.beanRainProgress < 0.05) {
         this.beanMesh.position.x += (this.mouse.x * 0.22 - this.beanMesh.position.x) * 0.04;
         this.beanMesh.position.y += (-this.mouse.y * 0.18 - this.beanMesh.position.y) * 0.04;
         this.beanMesh.rotation.y = Math.sin(elapsedTime * 0.22) * 0.035;
@@ -1164,11 +1593,15 @@ export class EmberScene {
     }
 
     // 3. Render Frame
-    this.renderer.render(this.scene, this.camera);
+    if (this.scrub.sectionMode !== 'atmosphere') {
+      this.renderer.render(this.scene, this.camera);
+    } else {
+      this.renderer.clear();
+    }
 
     // Render foreground beans layer only when foreground beans are active (progress > 0.50)
     if (this.fgRenderer && this.sceneFg) {
-      if (this.scrub.beanRainProgress > 0.50) {
+      if (this.scrub.beanRainProgress > 0.50 && this.scrub.sectionMode === 'bean-rain') {
         this.fgRenderer.render(this.sceneFg, this.camera);
       } else {
         this.fgRenderer.clear();
@@ -1187,6 +1620,8 @@ export class EmberScene {
       coffee: this.coffeeMesh,
       spoon: this.spoonMesh,
       beans: this.beanMesh,
+      processGroup: this.processGroup,
+      processBean: this.processBeanMesh,
       camera: this.camera,
       scene: this.scene,
       renderer: this.renderer,
@@ -1196,6 +1631,11 @@ export class EmberScene {
       setDiveScrub: this.setDiveScrub.bind(this),
       setExplodedScrub: this.setExplodedScrub.bind(this),
       setBeanRainScrub: this.setBeanRainScrub.bind(this),
+      setMenuScrub: this.setMenuScrub.bind(this),
+      setDrinkActive: this.setDrinkActive.bind(this),
+      setProcessScrub: this.setProcessScrub.bind(this),
+      setAtmosphereScrub: this.setAtmosphereScrub.bind(this),
+      setFinaleScrub: this.setFinaleScrub.bind(this),
       renderState: {
         clock: this.clock,
         mouse: this.mouse,

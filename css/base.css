@@ -31,7 +31,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 5; /* In front of wordmark (z-index: 1) so 3D cup stands in front */
+  z-index: 12; /* In front of wordmark & finale paper, behind site-nav and modal */
   pointer-events: none;
   overflow: hidden;
 }

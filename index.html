@@ -11,9 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./css/tokens.css?v=7">
-  <link rel="stylesheet" href="./css/base.css?v=7">
-  <link rel="stylesheet" href="./css/storyboards.css?v=7">
+  <link rel="stylesheet" href="./css/tokens.css?v=8">
+  <link rel="stylesheet" href="./css/base.css?v=8">
+  <link rel="stylesheet" href="./css/storyboards.css?v=8">
+  <link rel="stylesheet" href="./css/stage2b.css?v=2">
   
   <!-- Pinned Dependencies via Importmap -->
   <script type="importmap">
@@ -191,9 +192,267 @@
         <p class="bean-rain-subline">We count them so you don't have to.</p>
       </div>
     </section>
+
+    <!-- Section 5: Menu ("The Signature Five") -->
+    <section class="section-menu scroll-section" id="menu">
+      <div class="menu-content-pin">
+        <header class="menu-header">
+          <span class="section-tag">[ 05 // MENU ]</span>
+          <h2 class="menu-title">The Signature Five</h2>
+        </header>
+
+        <div class="menu-cards-track-wrap">
+          <div class="menu-cards-track" id="menu-cards-track">
+            <!-- Card 01: Ember Espresso -->
+            <article class="menu-card menu-card-0" data-drink-index="0" data-liquid="#2A1208">
+              <div class="card-numeral">01</div>
+              <div class="card-body">
+                <h3 class="card-drink-name">Ember Espresso</h3>
+                <p class="card-drink-desc">Dark cocoa, orange peel, a long finish.</p>
+              </div>
+              <div class="card-footer">
+                <span class="card-price">₹120</span>
+                <span class="card-liquid-dot" style="background-color: #2A1208;" aria-hidden="true"></span>
+              </div>
+            </article>
+
+            <!-- Card 02: Cortado Noir -->
+            <article class="menu-card menu-card-1" data-drink-index="1" data-liquid="#8A5A35">
+              <div class="card-numeral">02</div>
+              <div class="card-body">
+                <h3 class="card-drink-name">Cortado Noir</h3>
+                <p class="card-drink-desc">Espresso and steamed milk in equal parts. Silk and smoke.</p>
+              </div>
+              <div class="card-footer">
+                <span class="card-price">₹160</span>
+                <span class="card-liquid-dot" style="background-color: #8A5A35;" aria-hidden="true"></span>
+              </div>
+            </article>
+
+            <!-- Card 03: Burnt Caramel Latte -->
+            <article class="menu-card menu-card-2" data-drink-index="2" data-liquid="#C68A52">
+              <div class="card-numeral">03</div>
+              <div class="card-body">
+                <h3 class="card-drink-name">Burnt Caramel Latte</h3>
+                <p class="card-drink-desc">Torched sugar, whole milk, a pinch of sea salt.</p>
+              </div>
+              <div class="card-footer">
+                <span class="card-price">₹190</span>
+                <span class="card-liquid-dot" style="background-color: #C68A52;" aria-hidden="true"></span>
+              </div>
+            </article>
+
+            <!-- Card 04: Cold Drip 18H -->
+            <article class="menu-card menu-card-3" data-drink-index="3" data-liquid="#1B0F0A">
+              <div class="card-numeral">04</div>
+              <div class="card-body">
+                <h3 class="card-drink-name">Cold Drip 18H</h3>
+                <p class="card-drink-desc">Steeped for eighteen hours. Clean, bright, dangerously smooth.</p>
+              </div>
+              <div class="card-footer">
+                <span class="card-price">₹210</span>
+                <span class="card-liquid-dot" style="background-color: #1B0F0A;" aria-hidden="true"></span>
+              </div>
+            </article>
+
+            <!-- Card 05: Ember Tonic -->
+            <article class="menu-card menu-card-4" data-drink-index="4" data-liquid="#D9822B">
+              <div class="card-numeral">05</div>
+              <div class="card-body">
+                <h3 class="card-drink-name">Ember Tonic</h3>
+                <p class="card-drink-desc">Espresso over tonic and citrus. Sparkling, bitter, alive.</p>
+              </div>
+              <div class="card-footer">
+                <span class="card-price">₹200</span>
+                <span class="card-liquid-dot" style="background-color: #D9822B;" aria-hidden="true"></span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Process ("From seed to second sip") -->
+    <section class="section-process scroll-section" id="process">
+      <div class="process-content-pin">
+        <header class="process-header">
+          <span class="section-tag">[ 06 // PROCESS ]</span>
+          <h2 class="process-title">From seed to second sip</h2>
+        </header>
+
+        <div class="process-steps-container">
+          <!-- Step 1: GREEN -->
+          <article class="process-step is-active" id="step-green" data-step="0">
+            <h3 class="step-headline">01 GREEN</h3>
+            <p class="step-copy">Raw, pale, grassy. Nothing yet.</p>
+          </article>
+
+          <!-- Step 2: ROAST -->
+          <article class="process-step" id="step-roast" data-step="1">
+            <h3 class="step-headline">02 ROAST</h3>
+            <p class="step-copy">Heat turns sugar to smoke. We stop at the right second.</p>
+          </article>
+
+          <!-- Step 3: GRIND -->
+          <article class="process-step" id="step-grind" data-step="2">
+            <h3 class="step-headline">03 GRIND</h3>
+            <p class="step-copy">Ground only when you order.</p>
+          </article>
+
+          <!-- Step 4: BREW -->
+          <article class="process-step" id="step-brew" data-step="3">
+            <h3 class="step-headline">04 BREW</h3>
+            <p class="step-copy">Ninety-two degrees. Twenty-eight seconds. Done.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: Atmosphere -->
+    <section class="section-atmosphere scroll-section" id="atmosphere">
+      <!-- Infinite Marquee with text from content.md -->
+      <div class="marquee-strip" aria-hidden="true">
+        <div class="marquee-track">
+          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+        </div>
+      </div>
+
+      <!-- Photo Gallery in filename order -->
+      <div class="atmosphere-gallery">
+        <div class="gallery-primary-grid">
+          <!-- Image 1: The bar -->
+          <figure class="gallery-item item-1">
+            <div class="image-reveal-frame">
+              <img src="./assets/aleksey-cherenkevich-c9BaR5Qdrmc-unsplash.jpg" alt="The bar" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
+            </div>
+            <figcaption class="gallery-caption">The bar</figcaption>
+          </figure>
+
+          <!-- Image 2: The roaster -->
+          <figure class="gallery-item item-2">
+            <div class="image-reveal-frame">
+              <img src="./assets/anastase-maragos-0jVZkTGmRNs-unsplash.jpg" alt="The roaster" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
+            </div>
+            <figcaption class="gallery-caption">The roaster</figcaption>
+          </figure>
+
+          <!-- Image 3: Late light -->
+          <figure class="gallery-item item-3">
+            <div class="image-reveal-frame">
+              <img src="./assets/mihai-moisa-Djtc1T38-GY-unsplash.jpg" alt="Late light" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
+            </div>
+            <figcaption class="gallery-caption">Late light</figcaption>
+          </figure>
+        </div>
+
+        <!-- Additional images in slow horizontal strip without captions -->
+        <div class="gallery-strip-wrap">
+          <div class="gallery-strip-track">
+            <div class="gallery-strip-item">
+              <img src="./assets/rizky-subagja-1k7TnX5GAww-unsplash.jpg" alt="Coffee craft detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
+            </div>
+            <div class="gallery-strip-item">
+              <img src="./assets/sparsh-soni-hYzc-xNtC28-unsplash.jpg" alt="Coffee pour detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: Finale -->
+    <section class="section-finale scroll-section" id="finale">
+      <div class="finale-paper-container">
+        <div class="finale-content-inner">
+          <span class="section-tag section-tag-dark">[ 08 // FINALE ]</span>
+          
+          <h2 class="finale-headline">
+            <span class="headline-row">Come for the cup.</span>
+            <span class="headline-row">Stay for the hour.</span>
+          </h2>
+
+          <!-- Large ember-orange "Reserve a table" pill with small cup preview + arrow -->
+          <div class="finale-cta-block">
+            <button type="button" class="finale-reserve-pill btn-open-modal" id="finale-reserve-btn" aria-haspopup="dialog">
+              <span class="pill-cup-target" id="pill-cup-target" aria-hidden="true"></span>
+              <span class="pill-label">Reserve a table</span>
+              <span class="pill-arrow-circle" aria-hidden="true">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 12L12 4M12 4H6M12 4V10" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+
+          <!-- Hours and Address below -->
+          <div class="finale-meta-grid">
+            <div class="meta-block">
+              <span class="meta-label">Hours</span>
+              <p class="meta-text">Mon–Fri 8am–10pm</p>
+              <p class="meta-text">Sat–Sun 9am–11pm</p>
+            </div>
+            <div class="meta-block">
+              <span class="meta-label">Address</span>
+              <p class="meta-text">Uttai, Bhillai</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Espresso Footer strip with giant EMBER wordmark + copyright -->
+        <footer class="finale-footer-strip">
+          <div class="footer-wordmark-wrap" aria-hidden="true">
+            <span class="footer-giant-wordmark">EMBER</span>
+          </div>
+          <div class="footer-meta-bar">
+            <span class="footer-copyright">© EMBER ATELIER</span>
+          </div>
+        </footer>
+      </div>
+    </section>
   </main>
 
+  <!-- Reservation Modal -->
+  <div id="reservation-modal" class="reservation-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-panel" id="modal-panel">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">Reserve a table</h2>
+        <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close">Close</button>
+      </div>
+
+      <form id="reservation-form" class="reservation-form" novalidate>
+        <div class="form-field">
+          <label for="field-name" class="form-label">Name</label>
+          <input type="text" id="field-name" name="name" class="form-input" required autocomplete="name" placeholder="Name">
+        </div>
+
+        <div class="form-field">
+          <label for="field-date" class="form-label">Date</label>
+          <input type="date" id="field-date" name="date" class="form-input" required>
+        </div>
+
+        <div class="form-field">
+          <label for="field-party" class="form-label">Party size</label>
+          <input type="number" id="field-party" name="partySize" min="1" max="12" class="form-input" required placeholder="Party size">
+        </div>
+
+        <div class="form-field">
+          <label for="field-time" class="form-label">Time</label>
+          <input type="time" id="field-time" name="time" class="form-input" required>
+        </div>
+
+        <button type="submit" class="modal-submit-btn" id="modal-submit-btn">Reserve a table</button>
+      </form>
+
+      <div class="modal-confirmation" id="modal-confirmation" aria-live="polite">
+        <p class="confirmation-text">Table requested. See you soon.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Module Entrypoint -->
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=8"></script>
 </body>
 </html>

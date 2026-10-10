@@ -42,3 +42,9 @@ Address: [Uttai, Bhillai]
 Footer: © EMBER ATELIER
 
 CURSOR LABELS: View / Drag / Reserve
+MODAL
+Title: Reserve a table
+Fields: Name / Date / Party size / Time
+Submit: Reserve a table
+Confirmation: Table requested. See you soon.
+Close: Close

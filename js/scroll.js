@@ -28,6 +28,8 @@ export class EmberScroll {
       gsap.set('.exploded-label', { opacity: 1, y: 0 });
       gsap.set('.exploded-leader-line', { strokeDashoffset: 0 });
       gsap.set('.bean-rain-subline', { opacity: 1, y: 0 });
+      gsap.set('.image-reveal-frame', { clipPath: 'inset(0 0 0% 0)' });
+      gsap.set('.process-step', { opacity: 1 });
       return;
     }
 
@@ -380,6 +382,199 @@ export class EmberScroll {
       ease: 'power2.in',
       duration: 0.04
     }, 0.96);
+    // ----------------------------------------------------
+    // 5. Menu ("The Signature Five")
+    // Horizontal strip of 5 tall cards inside left ~65%
+    // 3D cup pinned in right third, driven by centered card or hover
+    // ----------------------------------------------------
+    const cardsTrack = document.getElementById('menu-cards-track');
+    const cardsWrap = document.querySelector('.menu-cards-track-wrap');
+    const cards = gsap.utils.toArray('.menu-card');
+
+    if (cardsTrack && cardsWrap && cards.length) {
+      const getScrollAmount = () => -(cardsTrack.scrollWidth - cardsWrap.clientWidth + 80);
+
+      const menuTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '#menu',
+          start: 'top top',
+          end: '+=200%',
+          pin: true,
+          scrub: 1.0,
+          anticipatePin: 1,
+          onEnter: () => window.emberStage?.setMenuScrub?.(0),
+          onEnterBack: () => window.emberStage?.setMenuScrub?.(1),
+          onUpdate: (self) => {
+            const p = self.progress;
+            window.emberStage?.setMenuScrub?.(p);
+
+            // Determine which card is centered in the track wrap
+            const wrapRect = cardsWrap.getBoundingClientRect();
+            const wrapCenter = wrapRect.left + wrapRect.width / 2;
+
+            let closestIndex = 0;
+            let closestDist = Infinity;
+
+            cards.forEach((card, idx) => {
+              const cardRect = card.getBoundingClientRect();
+              const cardCenter = cardRect.left + cardRect.width / 2;
+              const dist = Math.abs(cardCenter - wrapCenter);
+              if (dist < closestDist) {
+                closestDist = dist;
+                closestIndex = idx;
+              }
+            });
+
+            // If user is not currently hovering a card, active center card drives cup
+            if (!this._userHoveringCard) {
+              cards.forEach((card, idx) => {
+                card.classList.toggle('is-active', idx === closestIndex);
+              });
+              if (this._currentActiveDrink !== closestIndex) {
+                this._currentActiveDrink = closestIndex;
+                window.emberStage?.setDrinkActive?.(closestIndex);
+              }
+            }
+          }
+        }
+      });
+
+      menuTl.to(cardsTrack, {
+        x: () => getScrollAmount(),
+        ease: 'none',
+        duration: 1.0
+      });
+
+      // Individual cards rotateY and scale slightly with progress
+      cards.forEach((card, idx) => {
+        menuTl.to(card, {
+          rotateY: (idx % 2 === 0 ? 8 : -8),
+          scale: 1.02,
+          ease: 'power1.inOut',
+          duration: 1.0
+        }, 0);
+
+        // Hover listener to override cup liquid color
+        card.addEventListener('mouseenter', () => {
+          this._userHoveringCard = true;
+          cards.forEach((c) => c.classList.remove('is-active'));
+          card.classList.add('is-active');
+          this._currentActiveDrink = idx;
+          window.emberStage?.setDrinkActive?.(idx);
+        });
+
+        card.addEventListener('mouseleave', () => {
+          this._userHoveringCard = false;
+        });
+      });
+    }
+
+    // ----------------------------------------------------
+    // 6. Process ("From seed to second sip")
+    // Pinned, 4 steps. Left 55%: GREEN, ROAST, GRIND, BREW in large Bodoni Moda
+    // Active step is ember orange, others 30% opacity.
+    // Right 45%: Large 3D bean rotates, lerps color -> pulse -> 300 granules -> stream to drop.
+    // ----------------------------------------------------
+    const processSteps = [
+      document.getElementById('step-green'),
+      document.getElementById('step-roast'),
+      document.getElementById('step-grind'),
+      document.getElementById('step-brew')
+    ];
+
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#process',
+        start: 'top top',
+        end: '+=240%',
+        pin: true,
+        scrub: 1.0,
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          const p = self.progress;
+          window.emberStage?.setProcessScrub?.(p);
+
+          // Step index based on progress: 0 to 3
+          const stepIdx = Math.min(Math.floor(p * 4), 3);
+          processSteps.forEach((step, idx) => {
+            if (step) {
+              step.classList.toggle('is-active', idx === stepIdx);
+            }
+          });
+        }
+      }
+    });
+
+    // ----------------------------------------------------
+    // 7. Atmosphere
+    // Infinite marquee + Gallery with clip-path reveal and 8% parallax
+    // ----------------------------------------------------
+    ScrollTrigger.create({
+      trigger: '#atmosphere',
+      start: 'top bottom',
+      end: 'bottom top',
+      onEnter: () => window.emberStage?.setAtmosphereScrub?.(0),
+      onEnterBack: () => window.emberStage?.setAtmosphereScrub?.(1),
+      onToggle: (self) => { if (self.isActive) window.emberStage?.setAtmosphereScrub?.(0); }
+    });
+
+    // Gallery clip-path reveal and 8% parallax
+    const galleryItems = gsap.utils.toArray('.gallery-item');
+    galleryItems.forEach((item) => {
+      const frame = item.querySelector('.image-reveal-frame');
+      const img = item.querySelector('.gallery-img');
+
+      if (frame) {
+        ScrollTrigger.create({
+          trigger: item,
+          start: 'top 85%',
+          onEnter: () => frame.classList.add('is-revealed')
+        });
+      }
+
+      if (img) {
+        gsap.fromTo(img, { yPercent: -8 }, {
+          yPercent: 8,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: item,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1.0
+          }
+        });
+      }
+    });
+
+    // Horizontal strip slow motion
+    const stripTrack = document.querySelector('.gallery-strip-track');
+    if (stripTrack) {
+      gsap.to(stripTrack, {
+        x: -160,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.gallery-strip-wrap',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.0
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // 8. Finale
+    // Background transitions to crema paper (#ECE1CE)
+    // 3D cup shrinks (scrub) and lands inside "Reserve a table" pill
+    // ----------------------------------------------------
+    ScrollTrigger.create({
+      trigger: '#finale',
+      start: 'top bottom',
+      end: 'bottom bottom',
+      scrub: 1.0,
+      onUpdate: (self) => {
+        window.emberStage?.setFinaleScrub?.(self.progress);
+      }
+    });
   }
 
   setupMobileTimelines() {
@@ -458,5 +653,62 @@ export class EmberScroll {
       }
     }, 0)
     .to('.bean-rain-subline', { opacity: 1, y: 0 }, 0.3);
+
+    // Mobile Menu: vertical list of cards
+    const mobileCards = gsap.utils.toArray('.menu-card');
+    mobileCards.forEach((card, idx) => {
+      ScrollTrigger.create({
+        trigger: card,
+        start: 'top 60%',
+        end: 'bottom 40%',
+        onEnter: () => {
+          mobileCards.forEach(c => c.classList.remove('is-active'));
+          card.classList.add('is-active');
+          window.emberStage?.setDrinkActive?.(idx);
+          window.emberStage?.setMenuScrub?.(idx / Math.max(1, mobileCards.length - 1));
+        },
+        onEnterBack: () => {
+          mobileCards.forEach(c => c.classList.remove('is-active'));
+          card.classList.add('is-active');
+          window.emberStage?.setDrinkActive?.(idx);
+          window.emberStage?.setMenuScrub?.(idx / Math.max(1, mobileCards.length - 1));
+        }
+      });
+    });
+
+    // Mobile Process
+    const mobileProcessSteps = [
+      document.getElementById('step-green'),
+      document.getElementById('step-roast'),
+      document.getElementById('step-grind'),
+      document.getElementById('step-brew')
+    ];
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: '#process',
+        start: 'top top',
+        end: '+=180%',
+        pin: true,
+        scrub: 1.0,
+        onUpdate: (self) => {
+          window.emberStage?.setProcessScrub?.(self.progress);
+          const stepIdx = Math.min(Math.floor(self.progress * 4), 3);
+          mobileProcessSteps.forEach((step, idx) => {
+            if (step) step.classList.toggle('is-active', idx === stepIdx);
+          });
+        }
+      }
+    });
+
+    // Mobile Atmosphere & Finale
+    ScrollTrigger.create({
+      trigger: '#finale',
+      start: 'top bottom',
+      end: 'bottom bottom',
+      scrub: 1.0,
+      onUpdate: (self) => {
+        window.emberStage?.setFinaleScrub?.(self.progress);
+      }
+    });
   }
 }
