@@ -2183,11 +2183,25 @@ export class EmberScene {
 
     if (progress < 0.25) {
       // Step 1: 01 GREEN (#7A9A4A)
+      // Entry: Bean grows out of dissolving menu vessel position to Process position, rotating
+      const tEntry = Math.min(progress / 0.12, 1.0);
+      const startX = isMobile ? 0 : 1.85;
+      const startY = isMobile ? 1.05 : 0.85;
+      const targetX = isMobile ? 0 : 1.48;
+      const targetY = isMobile ? 0.9 : 0.0;
+      const curX = THREE.MathUtils.lerp(startX, targetX, tEntry);
+      const curY = THREE.MathUtils.lerp(startY, targetY, tEntry);
+      const curScale = THREE.MathUtils.lerp(0.25, 1.0, tEntry);
+
+      this.processGroup.position.set(curX, curY, 0);
       this.processBeanMesh.visible = true;
-      this.processBeanMesh.scale.set(1.0, 1.0, 1.0);
+      this.processBeanMesh.scale.set(curScale, curScale, curScale);
+      this.processBeanMesh.rotation.y = tEntry * Math.PI * 2.0;
+      this.processBeanMesh.rotation.x = 0.15 + tEntry * 0.2;
       this.processBeanMaterial.color.copy(colorGreen);
       this.processGranulesMesh.visible = false;
       this.processDropletMesh.visible = false;
+      if (this.cupGroup) this.cupGroup.visible = false;
     } else if (progress < 0.50) {
       // Step 2: 02 ROAST (#7A9A4A -> #5A3220 with small scale pulse)
       const t = (progress - 0.25) / 0.25;
@@ -2200,6 +2214,7 @@ export class EmberScene {
 
       this.processGranulesMesh.visible = false;
       this.processDropletMesh.visible = false;
+      if (this.cupGroup) this.cupGroup.visible = false;
     } else if (progress < 0.75) {
       // Step 3: 03 GRIND (bean breaks into ~300 granules that scatter and settle)
       const t = (progress - 0.50) / 0.25;
@@ -2213,6 +2228,7 @@ export class EmberScene {
 
       this.processGranulesMesh.visible = true;
       this.processDropletMesh.visible = false;
+      if (this.cupGroup) this.cupGroup.visible = false;
 
       // Scatter and settle granules
       const burstPeak = Math.sin(Math.min(t * 1.5, 1.0) * Math.PI);
@@ -2230,10 +2246,10 @@ export class EmberScene {
       }
       this.processGranulesMesh.instanceMatrix.needsUpdate = true;
     } else {
-      // Step 4: 04 BREW (granules fall into thin stream fading into dark liquid drop)
+      // Step 4: 04 BREW (granules fall into stream, droplet forms and accelerates downward)
       const t = (progress - 0.75) / 0.25;
       this.processBeanMesh.visible = false;
-      this.processGranulesMesh.visible = t < 0.95;
+      this.processGranulesMesh.visible = t < 0.85;
       this.processDropletMesh.visible = true;
 
       // Granules fall into stream and fade
@@ -2244,7 +2260,7 @@ export class EmberScene {
         const curY = THREE.MathUtils.lerp(g.settlePos.y, g.streamTarget.y - t * 0.8, streamProgress);
         const curZ = THREE.MathUtils.lerp(g.settlePos.z, g.streamTarget.z, streamProgress);
 
-        const fadeScale = Math.max(0, g.scale * (1.0 - t * 1.1));
+        const fadeScale = Math.max(0, g.scale * (1.0 - t * 1.2));
         dummy.position.set(curX, curY, curZ);
         dummy.scale.set(fadeScale, fadeScale, fadeScale);
         dummy.rotation.set(0, curY * 4, 0);
@@ -2253,11 +2269,29 @@ export class EmberScene {
       }
       this.processGranulesMesh.instanceMatrix.needsUpdate = true;
 
-      // Dark liquid drop grows and gently pulses
-      const dropScale = Math.min(t * 1.3, 1.0);
-      const bobY = -0.95 + Math.sin(t * Math.PI * 4) * 0.04;
-      this.processDropletMesh.scale.set(dropScale, dropScale * 1.1, dropScale);
-      this.processDropletMesh.position.y = bobY;
+      if (t < 0.50) {
+        // Drop forms and pulses
+        const dropScale = Math.min(t * 2.0, 1.0);
+        const bobY = -0.95 + Math.sin(t * Math.PI * 4) * 0.04;
+        this.processDropletMesh.scale.set(dropScale, dropScale * 1.1, dropScale);
+        this.processDropletMesh.position.y = bobY;
+        if (this.cupGroup) this.cupGroup.visible = false;
+      } else {
+        // Drop elongates and falls with acceleration toward landing point
+        const tDrop = (t - 0.50) / 0.50;
+        const scaleX = Math.max(0.01, 1.0 - tDrop * 0.5);
+        const scaleY = 1.0 + tDrop * 2.5;
+        this.processDropletMesh.scale.set(scaleX, scaleY, scaleX);
+        this.processDropletMesh.position.y = -0.95 - tDrop * tDrop * 2.8;
+
+        // Where it lands: finale cup rises into place as background turns to crema
+        if (this.cupGroup && tDrop > 0.35) {
+          const cupT = (tDrop - 0.35) / 0.65;
+          this.cupGroup.visible = true;
+          this.cupGroup.position.set(0, -2.4 + cupT * 1.8, 0);
+          this.cupGroup.scale.set(0.48 * cupT, 0.48 * cupT, 0.48 * cupT);
+        }
+      }
     }
   }
 

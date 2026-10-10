@@ -606,29 +606,60 @@ export class EmberScroll {
       document.getElementById('step-grind'),
       document.getElementById('step-brew')
     ];
+    const processCremaReveal = document.getElementById('process-crema-reveal');
 
-    gsap.timeline({
-      scrollTrigger: {
-        trigger: '#process',
-        start: 'top top',
-        end: '+=240%',
-        pin: true,
-        scrub: 1.0,
-        anticipatePin: 1,
-        onEnter: () => window.emberStage?.setProcessScrub?.(0),
-        onEnterBack: () => window.emberStage?.setProcessScrub?.(1),
-        onUpdate: (self) => {
-          if (!self.isActive) return;
-          const p = self.progress;
-          window.emberStage?.setProcessScrub?.(p);
+    const animateProcessEntry = () => {
+      processSteps.forEach((step, idx) => {
+        if (!step) return;
+        step.classList.toggle('is-active', idx === 0);
+        gsap.fromTo(step, 
+          { x: -32, opacity: 0 }, 
+          { x: 0, opacity: idx === 0 ? 1.0 : 0.30, duration: 0.5, delay: idx * 0.07, ease: 'power2.out', overwrite: 'auto' }
+        );
+      });
+    };
 
-          // Step index based on progress: 0 to 3
-          const stepIdx = Math.min(Math.floor(p * 4), 3);
-          processSteps.forEach((step, idx) => {
-            if (step) {
-              step.classList.toggle('is-active', idx === stepIdx);
-            }
-          });
+    ScrollTrigger.create({
+      trigger: '#process',
+      start: 'top top',
+      end: '+=220%',
+      pin: true,
+      scrub: 0.8,
+      anticipatePin: 1,
+      onEnter: () => {
+        window.emberStage?.setProcessScrub?.(0);
+        animateProcessEntry();
+        if (processCremaReveal) processCremaReveal.style.clipPath = 'circle(0% at 50% 90%)';
+      },
+      onEnterBack: () => {
+        window.emberStage?.setProcessScrub?.(1);
+        processSteps.forEach((step, idx) => {
+          if (step) step.classList.toggle('is-active', idx === 3);
+        });
+        if (processCremaReveal) processCremaReveal.style.clipPath = 'circle(160% at 50% 90%)';
+      },
+      onUpdate: (self) => {
+        if (!self.isActive) return;
+        const p = self.progress;
+        window.emberStage?.setProcessScrub?.(p);
+
+        // Step index based on progress: 0 to 3
+        const stepIdx = Math.min(Math.floor(p * 4), 3);
+        processSteps.forEach((step, idx) => {
+          if (step) {
+            step.classList.toggle('is-active', idx === stepIdx);
+          }
+        });
+
+        // Exit: expanding circular clip-path from landing point (50% 90%)
+        if (processCremaReveal) {
+          if (p >= 0.88) {
+            const tReveal = (p - 0.88) / 0.12;
+            const radius = (tReveal * tReveal) * 160;
+            processCremaReveal.style.clipPath = `circle(${radius}% at 50% 90%)`;
+          } else {
+            processCremaReveal.style.clipPath = 'circle(0% at 50% 90%)';
+          }
         }
       }
     });

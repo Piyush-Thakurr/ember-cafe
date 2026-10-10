@@ -267,8 +267,18 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: transparent;
-  margin-top: -100vh;
+  background: #14100D;
+  margin-top: 0;
+}
+
+.process-crema-reveal {
+  position: absolute;
+  inset: 0;
+  background: #ECE1CE;
+  z-index: 5;
+  pointer-events: none;
+  clip-path: circle(0% at 50% 90%);
+  will-change: clip-path;
 }
 
 .process-content-pin {
