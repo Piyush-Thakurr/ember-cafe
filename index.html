@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMBER — Atelier of slow coffee</title>
+  
+  <!-- Typography from DESIGN.md (Bodoni Moda, EB Garamond, Space Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./css/tokens.css?v=6">
+  <link rel="stylesheet" href="./css/base.css?v=6">
+  <link rel="stylesheet" href="./css/storyboards.css?v=6">
+  
+  <!-- Pinned Dependencies via Importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.168.0/build/three.module.js",
+      "gsap": "https://esm.sh/gsap@3.12.5",
+      "gsap/ScrollTrigger": "https://esm.sh/gsap@3.12.5/ScrollTrigger",
+      "lenis": "https://esm.sh/lenis@1.1.14"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Preloader: "Brewing…" 0->100 with filling cup silhouette -->
+  <aside id="preloader" aria-label="Loading Experience">
+    <svg class="preloader-cup-svg" viewBox="0 0 64 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="cup-clip">
+          <path d="M6 10H50V34C50 43 42 50 32 50H24C14 50 6 43 6 34V10Z" />
+        </clipPath>
+      </defs>
+      <!-- Cup outline and handle -->
+      <path d="M6 10H50V34C50 43 42 50 32 50H24C14 50 6 43 6 34V10Z" stroke="#F1E6D3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M50 16H55C58 16 60 18 60 21V25C60 28 58 30 55 30H50" stroke="#F1E6D3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M2 52H54" stroke="#F1E6D3" stroke-width="2" stroke-linecap="round" />
+      <!-- Animated Coffee Fill Level -->
+      <g clip-path="url(#cup-clip)">
+        <rect id="cup-liquid-fill" x="0" y="52" width="64" height="0" fill="#D94F1A" opacity="0.9" />
+      </g>
+    </svg>
+    <div class="preloader-status">
+      <span>Brewing…</span>
+      <span class="preloader-counter">0</span>
+    </div>
+  </aside>
+
+  <!-- Giant Wordmark in Crema #F1E6D3 behind the 3D cup -->
+  <div class="hero-wordmark-container" aria-hidden="true">
+    <h1 class="hero-wordmark">
+      <span class="ember-char" id="char-e1">E</span>
+      <span class="ember-char" id="char-m">M</span>
+      <span class="ember-char" id="char-b">B</span>
+      <span class="ember-char" id="char-e2">E</span>
+      <span class="ember-char" id="char-r">R</span>
+    </h1>
+  </div>
+
+  <!-- Fixed Full-Screen WebGL Canvas Behind Page Content (z-index: 5) -->
+  <div id="webgl-canvas-container" aria-hidden="true">
+    <canvas id="webgl-canvas"></canvas>
+  </div>
+
+  <!-- Solid Navigation (Solid #14100D, 1px Hairline, No Blur) -->
+  <header class="site-nav">
+    <a href="#" class="nav-brand">
+      <span class="brand-text">EMBER — Atelier of slow coffee</span>
+    </a>
+    
+    <nav aria-label="Main Navigation">
+      <ul class="nav-links">
+        <li><a href="#menu" class="nav-link">Menu</a></li>
+        <li><a href="#process" class="nav-link">Process</a></li>
+        <li><a href="#visit" class="nav-link">Visit</a></li>
+      </ul>
+    </nav>
+    
+    <div class="nav-actions">
+      <a href="#reserve" class="btn-pill">Reserve</a>
+    </div>
+  </header>
+
+  <!-- Main Experience -->
+  <main>
+    <!-- Section 1: Hero & Scrolled State -->
+    <section class="hero-section scroll-section" id="hero">
+      <div class="hero-top-bar"></div>
+
+      <div class="hero-bottom-bar">
+        <div class="hero-tagline-block">
+          <p class="hero-tagline">
+            Roasted slow.<br>Poured loud.
+          </p>
+        </div>
+        
+        <div class="hero-scroll-hint">
+          <span>Scroll to descend</span>
+          <svg class="scroll-indicator-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 1v10M2 7l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Dive (State 2) -->
+    <section class="section-dive scroll-section" id="dive">
+      <div class="dive-fade-overlay" aria-hidden="true"></div>
+      <div class="dive-content-pin">
+        <h2 class="dive-headline">
+          <span class="line-mask"><span class="line-text line-text-1">Look closer.</span></span>
+          <span class="line-mask"><span class="line-text line-text-2">The crema is a map.</span></span>
+        </h2>
+      </div>
+    </section>
+
+    <!-- Section 3: Exploded View -->
+    <section class="section-exploded scroll-section" id="exploded">
+      <div class="exploded-content-pin">
+        <!-- SVG Leader Lines -->
+        <svg class="exploded-svg-layer" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true">
+          <!-- Line 1: Origin (Top-left to liquid/bean layer) -->
+          <path class="exploded-leader-line line-origin" d="M 280 250 L 580 340" />
+          <!-- Line 2: Roast (Right to cup body) -->
+          <path class="exploded-leader-line line-roast" d="M 1160 460 L 820 480" />
+          <!-- Line 3: Notes (Bottom-left to saucer) -->
+          <path class="exploded-leader-line line-notes" d="M 280 670 L 640 620" />
+        </svg>
+
+        <!-- Labels (Verbatim from content.md) -->
+        <div class="exploded-label" id="label-origin">
+          <span class="exploded-label-index">01 ORIGIN</span> — Single-estate beans, picked ripe, washed slow.
+        </div>
+
+        <div class="exploded-label" id="label-roast">
+          <span class="exploded-label-index">02 ROAST</span> — Medium-dark, rested seven days, never rushed.
+        </div>
+
+        <div class="exploded-label" id="label-notes">
+          <span class="exploded-label-index">03 NOTES</span> — Dark cocoa, burnt caramel, orange peel.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Bean Rain (State 3) -->
+    <section class="section-bean-rain scroll-section" id="bean-rain">
+      <div class="bean-rain-glow" aria-hidden="true"></div>
+      <div class="bean-rain-pin">
+        <div class="bean-rain-headline-wrap">
+          <h2 class="bean-rain-line line-left">400 BEANS.</h2>
+          <h2 class="bean-rain-line line-right">ONE CUP.</h2>
+        </div>
+        <canvas id="webgl-beans-fg" class="bean-rain-fg-canvas" aria-hidden="true"></canvas>
+        <p class="bean-rain-subline">We count them so you don't have to.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Module Entrypoint -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

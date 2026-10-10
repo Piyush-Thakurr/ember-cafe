@@ -1,0 +1,328 @@
+/* EMBER Storyboard Sections CSS (Stage 2A) */
+
+/* Preloader */
+#preloader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--color-primary-container); /* Solid #14100D */
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-lg);
+  pointer-events: auto;
+}
+
+.preloader-cup-svg {
+  width: 72px;
+  height: 64px;
+}
+
+.preloader-status {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-crema);
+}
+
+.preloader-counter {
+  font-weight: 700;
+  color: var(--color-on-tertiary-container);
+  min-width: 38px;
+}
+
+/* Hero Letter Spans for Scroll Spreading */
+.hero-wordmark {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ember-char {
+  display: inline-block;
+  will-change: transform, opacity;
+  transform-origin: center center;
+}
+
+/* Sections Structure for Scroll Scrubbing */
+.scroll-section {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Section: Dive (State 2) */
+.section-dive {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.dive-content-pin {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 var(--margin-desktop);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dive-headline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(38px, 5.5vw, 84px);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--color-crema);
+  text-align: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.line-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.line-text {
+  display: block;
+  will-change: transform;
+}
+
+.dive-fade-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-surface-container-lowest);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6; /* In front of 3D canvas (z-index: 5), behind text (z-index: 10) */
+  will-change: opacity;
+}
+
+/* Section: Exploded View (State 3 Prep) */
+.section-exploded {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.exploded-content-pin {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.exploded-svg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.exploded-leader-line {
+  stroke: var(--color-on-tertiary-container);
+  stroke-width: 1.5;
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  fill: none;
+}
+
+.exploded-label {
+  position: absolute;
+  max-width: 320px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
+  color: var(--color-crema);
+  opacity: 0;
+  transform: translateY(20px);
+  will-change: transform, opacity;
+  z-index: 12;
+}
+
+.exploded-label-index {
+  color: var(--color-on-tertiary-container);
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* Label Positions (Kept fully inside viewport with >=48px margins) */
+#label-origin {
+  top: 24%;
+  left: max(48px, 6vw);
+}
+
+#label-roast {
+  top: 48%;
+  right: max(48px, 6vw);
+  text-align: right;
+}
+
+#label-notes {
+  top: 72%;
+  left: max(48px, 6vw);
+}
+
+/* Section: Bean Rain (State 3) */
+.section-bean-rain {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, transparent 65%, rgba(20, 16, 13, 0.25) 100%);
+}
+
+.bean-rain-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60vh;
+  height: 60vh;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(224, 84, 31, 0.12) 0%, rgba(224, 84, 31, 0.05) 45%, rgba(224, 84, 31, 0) 70%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bean-rain-pin {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.bean-rain-headline-wrap {
+  width: calc(100vw - 96px);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0 48px;
+  box-sizing: border-box;
+  will-change: transform;
+  z-index: 8;
+}
+
+.bean-rain-line {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-display);
+  font-size: clamp(52px, 9.8vw, 165px);
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.line-left {
+  font-weight: 800;
+  font-style: normal;
+  color: var(--color-crema); /* solid crema #F1E6D3 fill */
+  align-self: flex-start;
+  width: min(72vw, calc(100vw - 96px));
+  text-align: left;
+}
+
+.line-right {
+  font-weight: 800;
+  font-style: italic;
+  color: transparent;
+  -webkit-text-stroke: 2px #E0541F;
+  stroke: 2px #E0541F;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+  text-rendering: geometricPrecision;
+  align-self: flex-end;
+  width: min(72vw, calc(100vw - 96px));
+  text-align: right;
+}
+
+.bean-rain-fg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 11; /* in front of headlines, behind subline */
+}
+
+.bean-rain-subline {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: clamp(18px, 2.2vw, 26px);
+  color: var(--color-on-surface-variant);
+  letter-spacing: 0.05em;
+  margin-top: var(--space-lg);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(20px);
+  will-change: transform, opacity;
+  z-index: 12;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .section-dive,
+  .section-exploded,
+  .section-bean-rain {
+    height: auto !important;
+    min-height: 80vh !important;
+  }
+
+  .dive-content-pin,
+  .exploded-content-pin,
+  .bean-rain-pin {
+    position: relative !important;
+    height: auto !important;
+    padding: 80px 48px !important;
+  }
+
+  .line-text,
+  .exploded-label,
+  .bean-rain-subline {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .exploded-leader-line {
+    stroke-dashoffset: 0 !important;
+  }
+}

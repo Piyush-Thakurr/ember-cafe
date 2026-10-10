@@ -1,0 +1,54 @@
+:root {
+  /* Surface & Background Palettes */
+  --color-surface: #210f00;
+  --color-surface-dim: #210f00;
+  --color-surface-bright: #563000;
+  --color-surface-container-lowest: #1a0a00;
+  --color-surface-container-low: #2d1600;
+  --color-surface-container: #321a00;
+  --color-surface-container-high: #412300;
+  --color-surface-container-highest: #502c00;
+  --color-primary-container: #14100d; /* Espresso Black */
+  
+  /* Text & Accents */
+  --color-on-surface: #ffdcbe;
+  --color-on-surface-variant: #d0c4bd;
+  --color-secondary: #cfc5b3;
+  --color-secondary-fixed: #ece1ce;
+  --color-crema: #f1e6d3;
+  --color-tertiary: #ffb59d;
+  --color-tertiary-container: #270600;
+  --color-on-tertiary-container: #d94f1a; /* Ember Orange */
+  
+  /* Borders & Hairlines */
+  --color-outline: #998f88;
+  --color-outline-variant: #4d4540;
+  --hairline-light: rgba(255, 220, 190, 0.15);
+  --hairline-warm: rgba(217, 79, 26, 0.35);
+  --hairline-dark: rgba(20, 16, 13, 0.15);
+  
+  /* Signature Liquid Colors (from content.md) */
+  --liquid-espresso: #2a1208;
+  --liquid-cortado: #8a5a35;
+  --liquid-latte: #c68a52;
+  --liquid-cold-drip: #1b0f0a;
+  --liquid-tonic: #d9822b;
+  
+  /* Typography */
+  --font-display: 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  --font-body: 'EB Garamond', Garamond, 'Times New Roman', serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+  
+  /* Spacing Scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+  
+  --margin-desktop: 4rem;
+  --margin-mobile: 1.25rem;
+  --gutter-desktop: 1.5rem;
+  --gutter-mobile: 1rem;
+}
