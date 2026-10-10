@@ -47,8 +47,54 @@ class EmberApp {
     // 5. Initialize Navigation & Reservation Modal (Stage 2B)
     this.initNavigation();
     this.initReservationModal();
+    this.initFooter();
 
     console.log('[EMBER] Stage 2B Initialized: Menu, Process, Atmosphere, Finale & Modal active.');
+  }
+
+  initFooter() {
+    // 1. Back to top button smooth scroll via Lenis
+    const backToTopBtn = document.getElementById('footer-back-to-top');
+    if (backToTopBtn) {
+      backToTopBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (this.lenis) {
+          this.lenis.scrollTo(0, { duration: 1.8, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    }
+
+    // 2. Footer directory links smooth scroll
+    const footerLinks = document.querySelectorAll('.footer-link');
+    footerLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          if (href === '#reserve') {
+            document.querySelector('#finale-reserve-btn')?.click();
+            return;
+          }
+          const target = href === '#visit' ? '#finale' : href;
+          if (this.lenis) {
+            this.lenis.scrollTo(target, { duration: 1.4, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+          } else {
+            const el = document.querySelector(target);
+            el?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
+    });
+
+    // 3. Hovering the finale pill causes coffee droplets to burst up and settle
+    const finalePill = document.getElementById('finale-reserve-btn');
+    if (finalePill) {
+      finalePill.addEventListener('mouseenter', () => {
+        window.emberStage?.burstFinaleSplash?.();
+      });
+    }
   }
 
   initNavigation() {

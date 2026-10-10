@@ -31,7 +31,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 5; /* Behind DOM text layers (z-index: 25), in front of document base */
+  z-index: 12; /* Behind DOM text layers (z-index: 20+), in front of section backgrounds (z-index: 1-2) */
   pointer-events: none;
   overflow: hidden;
 }

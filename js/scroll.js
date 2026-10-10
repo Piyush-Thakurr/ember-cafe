@@ -721,20 +721,49 @@ export class EmberScroll {
     }
 
     // ----------------------------------------------------
-    // 8. Finale
+    // 8. Finale (130vh budget)
     // Background transitions to crema paper (#ECE1CE)
     // 3D cup shrinks (scrub) and lands inside "Reserve a table" pill
     // ----------------------------------------------------
     ScrollTrigger.create({
       trigger: '#finale',
-      start: 'top bottom',
-      end: 'bottom bottom',
-      scrub: 1.0,
+      start: 'top top',
+      end: '+=130%',
+      pin: true,
+      scrub: 0.8,
+      anticipatePin: 1,
       onEnter: () => window.emberStage?.setFinaleScrub?.(0),
       onEnterBack: () => window.emberStage?.setFinaleScrub?.(1),
       onUpdate: (self) => {
         if (!self.isActive) return;
         window.emberStage?.setFinaleScrub?.(self.progress);
+      }
+    });
+
+    // ----------------------------------------------------
+    // 9. Footer (70vh budget, letters rising into place on enter)
+    // ----------------------------------------------------
+    gsap.from('#footer-wordmark .wordmark-char', {
+      y: 70,
+      opacity: 0,
+      stagger: 0.08,
+      duration: 1.0,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '#footer',
+        start: 'top 85%'
+      }
+    });
+
+    gsap.from('.footer-col', {
+      y: 35,
+      opacity: 0,
+      stagger: 0.1,
+      duration: 0.8,
+      ease: 'power2.out',
+      scrollTrigger: {
+        trigger: '#footer',
+        start: 'top 85%'
       }
     });
   }
