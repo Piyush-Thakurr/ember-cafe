@@ -322,59 +322,71 @@
           </article>
         </div>
       </div>
+
+      <!-- Process Exit: Circular clip-path reveal from drop landing opening first photo -->
+      <div class="process-exit-reveal" id="process-exit-reveal" aria-hidden="true">
+        <img src="./assets/aleksey-cherenkevich-c9BaR5Qdrmc-unsplash.jpg" alt="The bar preview" class="process-reveal-img" width="1200" height="800">
+      </div>
     </section>
 
-    <!-- Section 7: Atmosphere -->
+    <!-- Section 7: Atmosphere (Photo Tunnel Pinned 220vh) -->
     <section class="section-atmosphere scroll-section" id="atmosphere">
-      <!-- Infinite Marquee with text from content.md -->
-      <div class="marquee-strip" aria-hidden="true">
-        <div class="marquee-track">
-          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
-          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
-          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
-          <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
-        </div>
-      </div>
-
-      <!-- Photo Gallery in filename order -->
-      <div class="atmosphere-gallery">
-        <div class="gallery-primary-grid">
-          <!-- Image 1: The bar -->
-          <figure class="gallery-item item-1" data-cursor="View">
-            <div class="image-reveal-frame">
-              <img src="./assets/aleksey-cherenkevich-c9BaR5Qdrmc-unsplash.jpg" alt="The bar" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
-            </div>
-            <figcaption class="gallery-caption">The bar</figcaption>
-          </figure>
-
-          <!-- Image 2: The roaster -->
-          <figure class="gallery-item item-2" data-cursor="View">
-            <div class="image-reveal-frame">
-              <img src="./assets/anastase-maragos-0jVZkTGmRNs-unsplash.jpg" alt="The roaster" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
-            </div>
-            <figcaption class="gallery-caption">The roaster</figcaption>
-          </figure>
-
-          <!-- Image 3: Late light -->
-          <figure class="gallery-item item-3" data-cursor="View">
-            <div class="image-reveal-frame">
-              <img src="./assets/mihai-moisa-Djtc1T38-GY-unsplash.jpg" alt="Late light" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
-            </div>
-            <figcaption class="gallery-caption">Late light</figcaption>
-          </figure>
-        </div>
-
-        <!-- Additional images in slow horizontal strip without captions -->
-        <div class="gallery-strip-wrap">
-          <div class="gallery-strip-track">
-            <div class="gallery-strip-item" data-cursor="View">
-              <img src="./assets/rizky-subagja-1k7TnX5GAww-unsplash.jpg" alt="Coffee craft detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
-            </div>
-            <div class="gallery-strip-item" data-cursor="View">
-              <img src="./assets/sparsh-soni-hYzc-xNtC28-unsplash.jpg" alt="Coffee pour detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
-            </div>
+      <div class="atmosphere-content-pin" id="atmosphere-content-pin">
+        <!-- Huge slow outline marquee behind tunnel, scrolling in opposite direction -->
+        <div class="tunnel-marquee-layer" aria-hidden="true">
+          <div class="tunnel-marquee-track" id="tunnel-marquee-track">
+            <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+            <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+            <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
+            <span>SLOW COFFEE • LOUD FLAVOUR • SMALL BATCHES • ROASTED DAILY •&nbsp;</span>
           </div>
         </div>
+
+        <!-- 3D Perspective Tunnel Viewport -->
+        <div class="tunnel-perspective-viewport" id="tunnel-perspective-viewport">
+          <div class="tunnel-track" id="tunnel-track">
+            <!-- Plane 1: The bar -->
+            <figure class="tunnel-plane plane-1" data-index="0" data-cursor="View">
+              <div class="tunnel-img-wrap">
+                <img src="./assets/aleksey-cherenkevich-c9BaR5Qdrmc-unsplash.jpg" alt="The bar" width="1200" height="800" class="tunnel-img" loading="eager" decoding="async">
+              </div>
+              <figcaption class="tunnel-caption">The bar</figcaption>
+            </figure>
+
+            <!-- Plane 2: The roaster -->
+            <figure class="tunnel-plane plane-2" data-index="1" data-cursor="View">
+              <div class="tunnel-img-wrap">
+                <img src="./assets/anastase-maragos-0jVZkTGmRNs-unsplash.jpg" alt="The roaster" width="1200" height="800" class="tunnel-img" loading="eager" decoding="async">
+              </div>
+              <figcaption class="tunnel-caption">The roaster</figcaption>
+            </figure>
+
+            <!-- Plane 3: Late light -->
+            <figure class="tunnel-plane plane-3" data-index="2" data-cursor="View">
+              <div class="tunnel-img-wrap">
+                <img src="./assets/mihai-moisa-Djtc1T38-GY-unsplash.jpg" alt="Late light" width="1200" height="800" class="tunnel-img" loading="eager" decoding="async">
+              </div>
+              <figcaption class="tunnel-caption">Late light</figcaption>
+            </figure>
+
+            <!-- Plane 4: Uncaptioned -->
+            <figure class="tunnel-plane plane-4" data-index="3" data-cursor="View">
+              <div class="tunnel-img-wrap">
+                <img src="./assets/rizky-subagja-1k7TnX5GAww-unsplash.jpg" alt="Coffee craft detail" width="900" height="600" class="tunnel-img" loading="eager" decoding="async">
+              </div>
+            </figure>
+
+            <!-- Plane 5: Uncaptioned -->
+            <figure class="tunnel-plane plane-5" data-index="4" data-cursor="View">
+              <div class="tunnel-img-wrap">
+                <img src="./assets/sparsh-soni-hYzc-xNtC28-unsplash.jpg" alt="Coffee pour detail" width="900" height="600" class="tunnel-img" loading="eager" decoding="async">
+              </div>
+            </figure>
+          </div>
+        </div>
+
+        <!-- Exit: Circular crema reveal from screen centre (starts 25vh radius) expanding to cover into Finale -->
+        <div class="atmosphere-crema-reveal" id="atmosphere-crema-reveal" aria-hidden="true"></div>
       </div>
     </section>
 

@@ -276,10 +276,39 @@
   overflow: hidden;
   background: #14100D;
   margin-top: 0;
+  margin-bottom: -100vh;
 }
 
 .process-crema-reveal {
   display: none !important;
+}
+
+.process-exit-reveal {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 25;
+  pointer-events: none;
+  opacity: 0;
+  clip-path: circle(0% at 72% 76%);
+  will-change: clip-path, opacity;
+  overflow: hidden;
+  contain: paint layout;
+  transform: translateZ(0);
+}
+
+.process-reveal-img {
+  position: absolute;
+  left: 72%;
+  top: 76%;
+  transform: translate(-50%, -50%);
+  width: clamp(380px, 34vw, 560px);
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 32px 70px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(241, 230, 211, 0.15);
 }
 
 .process-content-pin {
@@ -357,129 +386,141 @@
 }
 
 /* ----------------------------------------------------
-   SECTION 7: ATMOSPHERE
+   SECTION 7: ATMOSPHERE (PHOTO TUNNEL 220VH PIN)
    ---------------------------------------------------- */
 .section-atmosphere {
   position: relative;
   width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   background: #14100D;
-  padding: 85px 0 100px 0;
-  box-sizing: border-box;
-  z-index: 10;
+  margin-top: 0;
+  margin-bottom: -100vh;
+  z-index: 20;
 }
 
-.marquee-strip {
+.atmosphere-content-pin {
+  position: absolute;
+  inset: 0;
   width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 20;
+}
+
+/* Background Huge Slow Outline Marquee */
+.tunnel-marquee-layer {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100vw;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.65;
   overflow: hidden;
   white-space: nowrap;
-  border-top: 1px solid rgba(255, 220, 190, 0.15);
-  border-bottom: 1px solid rgba(255, 220, 190, 0.15);
-  padding: 14px 0;
-  margin-bottom: 36px;
-  background: rgba(20, 16, 13, 0.95);
-  contain: paint layout;
-  transform: translateZ(0);
 }
 
-.marquee-track {
+.tunnel-marquee-track {
   display: inline-flex;
   white-space: nowrap;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  animation: marquee-scroll 24s linear infinite;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 11;
+  font-size: clamp(90px, 13vw, 190px);
+  line-height: 1;
+  -webkit-text-stroke: 1.5px rgba(241, 230, 211, 0.22);
+  color: transparent;
   text-transform: uppercase;
-  color: #E0541F;
+  letter-spacing: 0.05em;
+  will-change: transform;
 }
 
-@keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+/* 3D Perspective Tunnel */
+.tunnel-perspective-viewport {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  pointer-events: auto;
+  z-index: 5;
 }
 
-.atmosphere-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 48px;
+.tunnel-track {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
-.gallery-primary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  padding: 0 max(48px, 5vw);
-  box-sizing: border-box;
-}
-
-.gallery-item {
+.tunnel-plane {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(380px, 34vw, 560px);
   margin: 0;
   padding: 0;
-  contain: paint;
-  transform: translateZ(0);
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  cursor: none;
 }
 
-.image-reveal-frame {
-  position: relative;
+.tunnel-plane:hover {
+  transform: translate3d(var(--tx, 0px), calc(var(--ty, 0px) - 16px), calc(var(--tz, 0px) + 50px)) scale(1.04) !important;
+  box-shadow: 0 32px 75px rgba(0, 0, 0, 0.8), 0 0 45px rgba(224, 84, 31, 0.25);
+  z-index: 80;
+}
+
+.tunnel-img-wrap {
+  width: 100%;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
-  height: 480px;
-  max-height: 52vh;
-  width: 100%;
-  border: 1px solid rgba(255, 220, 190, 0.12);
-  clip-path: inset(0 0 100% 0);
-  transition: clip-path 1.0s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: clip-path;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  border-radius: 4px;
+  border: 1px solid rgba(241, 230, 211, 0.14);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.65);
+  background: #1A1410;
 }
 
-.image-reveal-frame.is-revealed {
-  clip-path: inset(0 0 0% 0);
-}
-
-.gallery-img {
+.tunnel-img {
   width: 100%;
-  height: 110%;
+  height: 100%;
   object-fit: cover;
   display: block;
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
-.gallery-caption {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+.tunnel-caption {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(20px, 2.2vw, 30px);
   color: var(--color-crema);
   margin-top: 14px;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.85);
+  letter-spacing: -0.01em;
 }
 
-.gallery-strip-wrap {
-  padding: 0 max(48px, 5vw);
-  overflow: hidden;
-}
-
-.gallery-strip-track {
-  display: flex;
-  gap: 32px;
-  will-change: transform;
-}
-
-.gallery-strip-item {
-  flex-shrink: 0;
-}
-
-.strip-img {
-  height: 380px;
-  width: auto;
-  object-fit: cover;
-  border: 1px solid rgba(255, 220, 190, 0.12);
-  display: block;
+/* Exit: Circular Crema Reveal into Finale */
+.atmosphere-crema-reveal {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #F4EDE2; /* Crema */
+  z-index: 100;
+  pointer-events: none;
+  clip-path: circle(0% at 50% 50%);
+  will-change: clip-path;
 }
 
 /* ----------------------------------------------------

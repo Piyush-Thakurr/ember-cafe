@@ -108,7 +108,7 @@ export class EmberScroll {
     this.beanRainTl = this.buildBeanRain();
     this.menuTrigger = this.buildMenu();
     this.processTrigger = this.buildProcess();
-    this.atmosphereTriggers = this.buildAtmosphere();
+    this.atmosphereTrigger = this.buildAtmosphere();
     this.finaleTrigger = this.buildFinale();
     this.footerTriggers = this.buildFooter();
 
@@ -119,6 +119,8 @@ export class EmberScroll {
     const beanRainST = this.beanRainTl.scrollTrigger;
     const menuST = this.menuTrigger;
     const processST = this.processTrigger;
+    const atmosphereST = this.atmosphereTrigger;
+    const finaleST = this.finaleTrigger;
 
     const registerHandover = (id, prevST, nextST, updateFn) => {
       return ScrollTrigger.create({
@@ -155,6 +157,14 @@ export class EmberScroll {
       window.emberStage?.setMenuScrub?.(1.0);
     });
 
+    this.handoverProcessAtmosphere = registerHandover('process-atmosphere', processST, atmosphereST, (p) => {
+      window.emberStage?.setProcessScrub?.(1.0);
+    });
+
+    this.handoverAtmosphereFinale = registerHandover('atmosphere-finale', atmosphereST, finaleST, (p) => {
+      window.emberStage?.setAtmosphereScrub?.(1.0);
+    });
+
     // Dynamically calculate and update section state based on scroll coordinates
     this.updateSectionByScroll = (scrollY) => {
       const heroST = this.heroTl?.scrollTrigger;
@@ -163,6 +173,7 @@ export class EmberScroll {
       const beanRainST = this.beanRainTl?.scrollTrigger;
       const menuST = this.menuTrigger;
       const processST = this.processTrigger;
+      const atmosphereST = this.atmosphereTrigger;
       const finaleST = this.finaleTrigger;
 
       if (!heroST || !diveST) return;
@@ -178,7 +189,7 @@ export class EmberScroll {
         activeId = 'bean-rain';
       } else if (scrollY < (processST.start - 50)) {
         activeId = 'menu';
-      } else if (scrollY < (processST.end + 50)) {
+      } else if (scrollY < (atmosphereST.start - 50)) {
         activeId = 'process';
       } else if (scrollY < (finaleST.start - 50)) {
         activeId = 'atmosphere';
@@ -822,6 +833,8 @@ export class EmberScroll {
         window.emberStage?.setProcessScrub?.(0);
         animateProcessEntry();
         gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
+        const rev = document.getElementById('process-exit-reveal');
+        if (rev) { rev.style.opacity = '0'; rev.style.clipPath = 'circle(0% at 72% 76%)'; }
       },
       onEnterBack: () => {
         this.updateSectionState('process');
@@ -830,12 +843,18 @@ export class EmberScroll {
           if (step) step.classList.toggle('is-active', idx === 3);
         });
         gsap.set('.process-content-pin', { opacity: 1, pointerEvents: 'auto' });
+        const rev = document.getElementById('process-exit-reveal');
+        if (rev) { rev.style.opacity = '1'; rev.style.clipPath = 'circle(150% at 72% 76%)'; }
       },
       onLeave: () => {
         gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
+        const rev = document.getElementById('process-exit-reveal');
+        if (rev) { rev.style.opacity = '0'; }
       },
       onLeaveBack: () => {
         gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
+        const rev = document.getElementById('process-exit-reveal');
+        if (rev) { rev.style.opacity = '0'; rev.style.clipPath = 'circle(0% at 72% 76%)'; }
       },
       onUpdate: (self) => {
         if (!self.isActive) return;
@@ -865,78 +884,154 @@ export class EmberScroll {
   }
 
   // ----------------------------------------------------
-  // 7. ATMOSPHERE (~220vh gallery, dark espresso background)
+  // 7. ATMOSPHERE: PHOTO TUNNEL (Pinned 220vh)
   // ----------------------------------------------------
   buildAtmosphere() {
-    const triggers = [];
+    const planes = [
+      { el: document.querySelector('.tunnel-plane.plane-1'), initX: 10, initY: -4, initZ: 0, rotZ: -1.5 },
+      { el: document.querySelector('.tunnel-plane.plane-2'), initX: -18, initY: 8, initZ: -700, rotZ: 2.0 },
+      { el: document.querySelector('.tunnel-plane.plane-3'), initX: 20, initY: -10, initZ: -1400, rotZ: -2.0 },
+      { el: document.querySelector('.tunnel-plane.plane-4'), initX: -16, initY: -6, initZ: -2100, rotZ: 1.5 },
+      { el: document.querySelector('.tunnel-plane.plane-5'), initX: 8, initY: 10, initZ: -2800, rotZ: -1.0 }
+    ];
 
-    // Mode switch trigger
-    const modeTrigger = ScrollTrigger.create({
+    const track = document.getElementById('tunnel-track');
+    const marqueeTrack = document.getElementById('tunnel-marquee-track');
+    const cremaReveal = document.getElementById('atmosphere-crema-reveal');
+    const atmospherePin = document.getElementById('atmosphere-content-pin');
+
+    gsap.set(atmospherePin, { opacity: 0, pointerEvents: 'none' });
+    if (cremaReveal) gsap.set(cremaReveal, { clipPath: 'circle(0% at 50% 50%)' });
+
+    const totalZTravel = 3400; // Total camera forward flight distance through the spiral
+
+    const updatePlanes = (progress, velocity = 0) => {
+      const currentCameraZ = progress * totalZTravel;
+
+      // Reverse marquee scroll
+      if (marqueeTrack) {
+        const marqueeOffset = -200 + progress * 800;
+        marqueeTrack.style.transform = `translateX(${marqueeOffset}px)`;
+      }
+
+      // Velocity tilt & bend
+      const bendX = gsap.utils.clamp(-8, 8, velocity * 0.003);
+      const bendY = gsap.utils.clamp(-5, 5, velocity * 0.0015);
+      if (track) {
+        gsap.to(track, {
+          rotateX: bendX,
+          rotateY: bendY,
+          duration: 0.35,
+          ease: 'power1.out',
+          overwrite: 'auto'
+        });
+      }
+
+      planes.forEach((p, idx) => {
+        if (!p.el) return;
+
+        // Relative Z position to camera
+        const zRel = p.initZ + currentCameraZ;
+
+        // Depth fade, blur, and opacity
+        let opacity = 1.0;
+        let filter = 'none';
+
+        if (zRel < -1800) {
+          // Far in the distance
+          const tFar = Math.max(0, (zRel + 2800) / 1000);
+          opacity = 0.25 + tFar * 0.25;
+          filter = `brightness(0.6) blur(${3 * (1 - tFar)}px)`;
+        } else if (zRel < -400) {
+          // Approaching camera
+          const tMid = (zRel + 1800) / 1400;
+          opacity = 0.5 + tMid * 0.5;
+          filter = `brightness(${0.75 + tMid * 0.25}) blur(0px)`;
+        } else if (zRel <= 120) {
+          // In focus passing camera
+          opacity = 1.0;
+          filter = 'brightness(1.0) blur(0px)';
+        } else {
+          // Passing behind camera: rapid graceful fade out before clipping
+          const tBehind = Math.min((zRel - 120) / 120, 1.0);
+          opacity = Math.max(0, 1.0 - tBehind);
+          filter = 'blur(1px)';
+        }
+
+        // Tilt toward camera when near
+        let rotX = 0;
+        if (zRel > -600 && zRel < 150) {
+          rotX = Math.sin((zRel + 600) / 750 * Math.PI) * -5.0;
+        }
+
+        // Slow organic drift
+        const driftX = Math.sin(progress * Math.PI * 3 + idx * 1.5) * 12;
+        const driftY = Math.cos(progress * Math.PI * 3 + idx * 1.5) * 10;
+
+        const posX = `calc(-50% + ${p.initX}vw + ${driftX}px)`;
+        const posY = `calc(-50% + ${p.initY}vh + ${driftY}px)`;
+
+        p.el.style.transform = `translate3d(${posX}, ${posY}, ${zRel}px) rotateZ(${p.rotZ}deg) rotateX(${rotX}deg)`;
+        p.el.style.setProperty('--tx', posX);
+        p.el.style.setProperty('--ty', posY);
+        p.el.style.setProperty('--tz', `${zRel}px`);
+        p.el.style.opacity = opacity.toFixed(3);
+        p.el.style.filter = filter;
+      });
+
+      // Exit transition into Finale (p >= 0.88 to 1.0)
+      if (cremaReveal) {
+        if (progress >= 0.88) {
+          const tCrema = (progress - 0.88) / 0.12;
+          // Starts from screen center at 25vh, expands to cover viewport (135vh)
+          const radiusVh = 25 + tCrema * 110;
+          cremaReveal.style.clipPath = `circle(${radiusVh}vh at 50% 50%)`;
+        } else {
+          cremaReveal.style.clipPath = 'circle(0% at 50% 50%)';
+        }
+      }
+    };
+
+    const atmosphereTrigger = ScrollTrigger.create({
       trigger: '#atmosphere',
-      start: 'top 50%',
-      end: 'bottom 50%',
+      start: 'top top',
+      end: '+=220%',
+      pin: true,
+      pinSpacing: true,
+      scrub: 0.8,
       invalidateOnRefresh: true,
       onEnter: () => {
         this.updateSectionState('atmosphere');
         window.emberStage?.setAtmosphereScrub?.(0);
+        updatePlanes(0, 0);
+        const rev = document.getElementById('process-exit-reveal');
+        if (rev) rev.style.opacity = '0';
+        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
       },
       onEnterBack: () => {
         this.updateSectionState('atmosphere');
         window.emberStage?.setAtmosphereScrub?.(1);
-      }
-    });
-    triggers.push(modeTrigger);
+        updatePlanes(1, 0);
+        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
+      },
+      onLeave: () => {
+        gsap.set(atmospherePin, { opacity: 0, pointerEvents: 'none' });
+      },
+      onLeaveBack: () => {
+        gsap.set(atmospherePin, { opacity: 0, pointerEvents: 'none' });
+      },
+      onUpdate: (self) => {
+        if (!self.isActive) return;
+        const p = self.progress;
+        window.emberStage?.setAtmosphereScrub?.(p);
+        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
 
-    // Gallery clip-path reveals & parallax
-    const galleryItems = gsap.utils.toArray('.gallery-item');
-    galleryItems.forEach((item) => {
-      const frame = item.querySelector('.image-reveal-frame');
-      const img = item.querySelector('.gallery-img');
-
-      if (frame) {
-        const revealST = ScrollTrigger.create({
-          trigger: item,
-          start: 'top 85%',
-          invalidateOnRefresh: true,
-          onEnter: () => frame.classList.add('is-revealed')
-        });
-        triggers.push(revealST);
-      }
-
-      if (img) {
-        const imgAnim = gsap.fromTo(img, { yPercent: -8 }, {
-          yPercent: 8,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: item,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: 1.0,
-            invalidateOnRefresh: true
-          }
-        });
-        triggers.push(imgAnim.scrollTrigger);
+        const v = self.getVelocity ? self.getVelocity() : 0;
+        updatePlanes(p, v);
       }
     });
 
-    // Horizontal strip slow drift
-    const stripTrack = document.querySelector('.gallery-strip-track');
-    if (stripTrack) {
-      const stripAnim = gsap.to(stripTrack, {
-        x: -160,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: '.gallery-strip-wrap',
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 1.0,
-          invalidateOnRefresh: true
-        }
-      });
-      triggers.push(stripAnim.scrollTrigger);
-    }
-
-    return triggers;
+    return atmosphereTrigger;
   }
 
   // ----------------------------------------------------

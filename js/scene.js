@@ -1003,10 +1003,10 @@ export class EmberScene {
 
     // 2. Instanced Granules for Step 3 GRIND (300 granules)
     const granuleCount = 300;
-    const granuleGeo = new THREE.SphereGeometry(0.045, 8, 8);
+    const granuleGeo = new THREE.DodecahedronGeometry(0.045, 0);
     const granuleMat = new THREE.MeshStandardMaterial({
       color: 0x4A2A18, // Rich roast ground color
-      roughness: 0.45,
+      roughness: 0.55,
       metalness: 0.05
     });
 
@@ -2612,24 +2612,26 @@ export class EmberScene {
       const t = (progress - 0.75) / 0.25;
       this.processBeanMesh.visible = false;
       this.processGranulesMesh.visible = t < 0.85;
-      this.processDropletMesh.visible = true;
+      this.processDropletMesh.visible = t < 0.98;
 
-      // Granules fall into stream and fade
-      for (let i = 0; i < this.granulesData.length; i++) {
-        const g = this.granulesData[i];
-        const streamProgress = Math.min((t * 1.3) + (i % 20) * 0.015, 1.0);
-        const curX = THREE.MathUtils.lerp(g.settlePos.x, g.streamTarget.x, streamProgress);
-        const curY = THREE.MathUtils.lerp(g.settlePos.y, g.streamTarget.y - t * 0.8, streamProgress);
-        const curZ = THREE.MathUtils.lerp(g.settlePos.z, g.streamTarget.z, streamProgress);
+      if (t < 0.85) {
+        // Granules fall into stream and fade
+        for (let i = 0; i < this.granulesData.length; i++) {
+          const g = this.granulesData[i];
+          const streamProgress = Math.min((t * 1.3) + (i % 20) * 0.015, 1.0);
+          const curX = THREE.MathUtils.lerp(g.settlePos.x, g.streamTarget.x, streamProgress);
+          const curY = THREE.MathUtils.lerp(g.settlePos.y, g.streamTarget.y - t * 0.8, streamProgress);
+          const curZ = THREE.MathUtils.lerp(g.settlePos.z, g.streamTarget.z, streamProgress);
 
-        const fadeScale = Math.max(0, g.scale * (1.0 - t * 1.2));
-        dummy.position.set(curX, curY, curZ);
-        dummy.scale.set(fadeScale, fadeScale, fadeScale);
-        dummy.rotation.set(0, curY * 4, 0);
-        dummy.updateMatrix();
-        this.processGranulesMesh.setMatrixAt(i, dummy.matrix);
+          const fadeScale = Math.max(0, g.scale * (1.0 - t * 1.2));
+          dummy.position.set(curX, curY, curZ);
+          dummy.scale.set(fadeScale, fadeScale, fadeScale);
+          dummy.rotation.set(0, curY * 4, 0);
+          dummy.updateMatrix();
+          this.processGranulesMesh.setMatrixAt(i, dummy.matrix);
+        }
+        this.processGranulesMesh.instanceMatrix.needsUpdate = true;
       }
-      this.processGranulesMesh.instanceMatrix.needsUpdate = true;
 
       if (t < 0.50) {
         // Drop forms and pulses
@@ -2638,7 +2640,7 @@ export class EmberScene {
         this.processDropletMesh.scale.set(dropScale, dropScale * 1.1, dropScale);
         this.processDropletMesh.position.y = bobY;
         if (this.cupGroup) this.cupGroup.visible = false;
-      } else {
+      } else if (t < 0.98) {
         // Drop elongates and falls with acceleration toward landing point
         const tDrop = (t - 0.50) / 0.50;
         const scaleX = Math.max(0.01, 1.0 - tDrop * 0.5);
@@ -2647,12 +2649,32 @@ export class EmberScene {
         this.processDropletMesh.position.y = -0.95 - tDrop * tDrop * 2.8;
 
         if (this.cupGroup) this.cupGroup.visible = false;
+      } else {
+        this.processDropletMesh.visible = false;
+      }
+    }
+
+    // Process Exit: Landing point circular clip-path reveal opening first photo
+    const exitRevealEl = document.getElementById('process-exit-reveal');
+    if (exitRevealEl) {
+      if (progress >= 0.88) {
+        const tReveal = Math.min((progress - 0.88) / 0.12, 1.0);
+        const radius = tReveal * 150;
+        const originX = isMobile ? 50 : 72;
+        const originY = isMobile ? 74 : 76;
+        exitRevealEl.style.opacity = '1';
+        exitRevealEl.style.clipPath = `circle(${radius}% at ${originX}% ${originY}%)`;
+      } else {
+        exitRevealEl.style.opacity = '0';
+        exitRevealEl.style.clipPath = `circle(0% at 72% 76%)`;
       }
     }
   }
 
   setAtmosphereScrub(progress) {
     this.scrub.sectionMode = 'atmosphere';
+    const exitRevealEl = document.getElementById('process-exit-reveal');
+    if (exitRevealEl) exitRevealEl.style.opacity = '0';
     if (this.cupGroup) this.cupGroup.visible = false;
     if (this.processGroup) this.processGroup.visible = false;
     if (this.beanMesh) this.beanMesh.visible = false;
