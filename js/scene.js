@@ -2441,13 +2441,7 @@ export class EmberScene {
         this.processDropletMesh.scale.set(scaleX, scaleY, scaleX);
         this.processDropletMesh.position.y = -0.95 - tDrop * tDrop * 2.8;
 
-        // Where it lands: finale cup rises into place as background turns to crema
-        if (this.cupGroup && tDrop > 0.35) {
-          const cupT = (tDrop - 0.35) / 0.65;
-          this.cupGroup.visible = true;
-          this.cupGroup.position.set(0, -2.4 + cupT * 1.8, 0);
-          this.cupGroup.scale.set(0.48 * cupT, 0.48 * cupT, 0.48 * cupT);
-        }
+        if (this.cupGroup) this.cupGroup.visible = false;
       }
     }
   }

@@ -68,7 +68,6 @@
   position: relative;
   overflow: hidden;
   background: transparent;
-  margin-top: -100vh;
 }
 
 .dive-content-pin {
@@ -127,7 +126,6 @@
   position: relative;
   overflow: hidden;
   background: transparent;
-  margin-top: -100vh;
 }
 
 .exploded-content-pin {
@@ -249,7 +247,6 @@
   position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse at center, transparent 65%, rgba(20, 16, 13, 0.25) 100%);
-  margin-top: -100vh;
 }
 
 .bean-rain-glow {

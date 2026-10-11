@@ -97,28 +97,22 @@ export class EmberPolish {
       }
     };
 
-    // View: over gallery images & cards
-    document.querySelectorAll('.gallery-item, .gallery-strip-item, .atmosphere-gallery img').forEach(el => {
-      el.addEventListener('mouseenter', () => setLabel('View'));
-      el.addEventListener('mouseleave', () => setLabel(''));
-    });
+    // Dynamic Labels: Only on elements with data-cursor attribute
+    document.addEventListener('mouseover', (e) => {
+      const cursorTarget = e.target.closest('[data-cursor]');
+      if (cursorTarget) {
+        const text = cursorTarget.getAttribute('data-cursor');
+        setLabel(text);
+      } else {
+        setLabel('');
+      }
 
-    // Drag: over hero stage & menu turntable
-    document.querySelectorAll('#hero, .turntable-showcase, #menu').forEach(el => {
-      el.addEventListener('mouseenter', () => setLabel('Drag'));
-      el.addEventListener('mouseleave', () => setLabel(''));
-    });
-
-    // Reserve: over booking buttons & pills
-    document.querySelectorAll('.btn-pill, #finale-reserve-btn, .btn-open-modal, a[href="#reserve"]').forEach(el => {
-      el.addEventListener('mouseenter', () => setLabel('Reserve'));
-      el.addEventListener('mouseleave', () => setLabel(''));
-    });
-
-    // Hover scale on generic links & buttons
-    document.querySelectorAll('a:not([href="#reserve"]), button:not(.btn-open-modal):not(#finale-reserve-btn)').forEach(el => {
-      el.addEventListener('mouseenter', () => cursor.classList.add('is-hovering'));
-      el.addEventListener('mouseleave', () => cursor.classList.remove('is-hovering'));
+      const interactive = e.target.closest('a, button, input, [role="button"]');
+      if (interactive) {
+        cursor.classList.add('is-hovering');
+      } else {
+        cursor.classList.remove('is-hovering');
+      }
     });
   }
 
@@ -216,20 +210,6 @@ export class EmberPolish {
 
       if (progressLine) {
         progressLine.style.transform = `scaleY(${progress})`;
-      }
-
-      // Check current section from cached top positions
-      let currentNum = '01';
-      const checkY = scrollY + window.innerHeight * 0.45;
-      for (let i = sectionCache.length - 1; i >= 0; i--) {
-        if (checkY >= sectionCache[i].top) {
-          currentNum = sectionCache[i].num;
-          break;
-        }
-      }
-
-      if (counterVal) {
-        counterVal.textContent = `[ ${currentNum} / 08 ]`;
       }
       scheduled = false;
     };

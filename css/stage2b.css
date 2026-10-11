@@ -9,7 +9,6 @@
   height: 100vh;
   overflow: hidden;
   background: transparent;
-  margin-top: -100vh;
 }
 
 .menu-content-pin {
@@ -272,13 +271,7 @@
 }
 
 .process-crema-reveal {
-  position: absolute;
-  inset: 0;
-  background: #ECE1CE;
-  z-index: 5;
-  pointer-events: none;
-  clip-path: circle(0% at 50% 90%);
-  will-change: clip-path;
+  display: none !important;
 }
 
 .process-content-pin {
@@ -317,7 +310,7 @@
 }
 
 .process-step {
-  opacity: 0.30;
+  opacity: 0.35;
   transition: opacity 0.4s ease, transform 0.4s ease;
   will-change: opacity, transform;
 }
@@ -375,12 +368,16 @@
   padding: 14px 0;
   margin-bottom: 36px;
   background: rgba(20, 16, 13, 0.95);
+  contain: paint layout;
+  transform: translateZ(0);
 }
 
 .marquee-track {
   display: inline-flex;
   white-space: nowrap;
   will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   animation: marquee-scroll 24s linear infinite;
   font-family: var(--font-mono);
   font-size: 13px;
@@ -412,6 +409,8 @@
 .gallery-item {
   margin: 0;
   padding: 0;
+  contain: paint;
+  transform: translateZ(0);
 }
 
 .image-reveal-frame {
@@ -424,6 +423,8 @@
   clip-path: inset(0 0 100% 0);
   transition: clip-path 1.0s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: clip-path;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .image-reveal-frame.is-revealed {
@@ -436,6 +437,8 @@
   object-fit: cover;
   display: block;
   will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .gallery-caption {
@@ -1125,8 +1128,21 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.2em;
-  color: #ECE1CE;
-  mix-blend-mode: difference;
+  color: var(--color-crema);
+  transition: opacity 0.3s ease, color 0.3s ease;
+}
+
+.scroll-section-counter.theme-dark {
+  color: var(--color-crema);
+}
+
+.scroll-section-counter.theme-light {
+  color: var(--color-espresso);
+}
+
+.scroll-section-counter.is-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Mobile Nav Toggle & Overlay */

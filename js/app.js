@@ -40,8 +40,26 @@ class EmberApp {
       if (this.stageAPI) {
         this.scroll = new EmberScroll(this.stageAPI);
         window.emberScroll = this.scroll;
-        ScrollTrigger.refresh();
-        this.lenis?.resize();
+
+        // Call ScrollTrigger.refresh() after document.fonts.ready, images loaded and canvas init
+        Promise.all([
+          document.fonts ? document.fonts.ready : Promise.resolve(),
+          new Promise(resolve => {
+            if (document.readyState === 'complete') resolve();
+            else window.addEventListener('load', resolve, { once: true });
+          })
+        ]).then(() => {
+          ScrollTrigger.sort();
+          ScrollTrigger.refresh();
+          this.lenis?.resize();
+
+          // Dev-only audit (?audit=1)
+          if (new URLSearchParams(window.location.search).get('audit') === '1') {
+            import('./audit.js').then(module => {
+              module.initAudit();
+            });
+          }
+        });
       }
     });
 

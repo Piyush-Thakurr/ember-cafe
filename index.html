@@ -107,7 +107,7 @@
     </nav>
     
     <div class="nav-actions">
-      <a href="#reserve" class="btn-pill">Reserve</a>
+      <a href="#reserve" class="btn-pill" data-cursor="Reserve">Reserve</a>
       <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
         <span class="hamburger-bar"></span>
         <span class="hamburger-bar"></span>
@@ -122,7 +122,7 @@
         <a href="#menu" class="mobile-nav-link">Menu</a>
         <a href="#process" class="mobile-nav-link">Process</a>
         <a href="#finale" class="mobile-nav-link">Visit</a>
-        <a href="#reserve" class="mobile-nav-link btn-open-modal">Reserve</a>
+        <a href="#reserve" class="mobile-nav-link btn-open-modal" data-cursor="Reserve">Reserve</a>
       </nav>
       <div class="mobile-nav-footer">
         <p class="mobile-nav-tagline">Roasted slow. Poured loud.</p>
@@ -301,7 +301,6 @@
 
     <!-- Section 6: Process ("From seed to second sip") -->
     <section class="section-process scroll-section" id="process">
-      <div class="process-crema-reveal" id="process-crema-reveal" aria-hidden="true"></div>
       <div class="process-content-pin">
         <header class="process-header">
           <span class="section-tag">[ 06 // PROCESS ]</span>
@@ -352,7 +351,7 @@
       <div class="atmosphere-gallery">
         <div class="gallery-primary-grid">
           <!-- Image 1: The bar -->
-          <figure class="gallery-item item-1">
+          <figure class="gallery-item item-1" data-cursor="View">
             <div class="image-reveal-frame">
               <img src="./assets/aleksey-cherenkevich-c9BaR5Qdrmc-unsplash.jpg" alt="The bar" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
             </div>
@@ -360,7 +359,7 @@
           </figure>
 
           <!-- Image 2: The roaster -->
-          <figure class="gallery-item item-2">
+          <figure class="gallery-item item-2" data-cursor="View">
             <div class="image-reveal-frame">
               <img src="./assets/anastase-maragos-0jVZkTGmRNs-unsplash.jpg" alt="The roaster" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
             </div>
@@ -368,7 +367,7 @@
           </figure>
 
           <!-- Image 3: Late light -->
-          <figure class="gallery-item item-3">
+          <figure class="gallery-item item-3" data-cursor="View">
             <div class="image-reveal-frame">
               <img src="./assets/mihai-moisa-Djtc1T38-GY-unsplash.jpg" alt="Late light" width="1200" height="800" loading="lazy" decoding="async" class="gallery-img">
             </div>
@@ -379,10 +378,10 @@
         <!-- Additional images in slow horizontal strip without captions -->
         <div class="gallery-strip-wrap">
           <div class="gallery-strip-track">
-            <div class="gallery-strip-item">
+            <div class="gallery-strip-item" data-cursor="View">
               <img src="./assets/rizky-subagja-1k7TnX5GAww-unsplash.jpg" alt="Coffee craft detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
             </div>
-            <div class="gallery-strip-item">
+            <div class="gallery-strip-item" data-cursor="View">
               <img src="./assets/sparsh-soni-hYzc-xNtC28-unsplash.jpg" alt="Coffee pour detail" width="900" height="600" loading="lazy" decoding="async" class="strip-img">
             </div>
           </div>
@@ -403,7 +402,7 @@
 
           <!-- Large ember-orange "Reserve a table" pill with small cup preview + arrow -->
           <div class="finale-cta-block">
-            <button type="button" class="finale-reserve-pill btn-open-modal" id="finale-reserve-btn" aria-haspopup="dialog">
+            <button type="button" class="finale-reserve-pill btn-open-modal" id="finale-reserve-btn" data-cursor="Reserve" aria-haspopup="dialog">
               <span class="pill-cup-target" id="pill-cup-target" aria-hidden="true"></span>
               <span class="pill-label">Reserve a table</span>
               <span class="pill-arrow-circle" aria-hidden="true">

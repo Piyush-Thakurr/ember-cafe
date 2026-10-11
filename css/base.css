@@ -42,7 +42,7 @@ body {
   display: block;
 }
 
-/* Floating, Transparent Nav (No solid bar, no border, mix-blend-mode difference) */
+/* Floating, Transparent Nav with soft 120px gradient scrim on dark sections */
 .site-nav {
   position: fixed;
   top: 0;
@@ -57,12 +57,55 @@ body {
   justify-content: space-between;
   padding: 0 var(--margin-desktop);
   box-sizing: border-box;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
   pointer-events: auto;
+  color: var(--color-crema);
+}
+
+.site-nav::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to bottom, rgba(20, 16, 13, 0.82) 0%, rgba(20, 16, 13, 0.42) 65%, rgba(20, 16, 13, 0) 100%);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+.site-nav.theme-dark {
+  color: var(--color-crema);
+}
+
+.site-nav.theme-dark::before {
+  opacity: 1;
+}
+
+.site-nav.theme-light {
+  color: var(--color-espresso);
+}
+
+.site-nav.theme-light::before {
+  opacity: 0;
 }
 
 .site-nav.is-hidden {
   transform: translateY(-100%);
+}
+
+.site-nav.theme-dark .brand-text,
+.site-nav.theme-dark .nav-link {
+  color: var(--color-crema);
+  text-shadow: 0 1px 4px rgba(20, 16, 13, 0.7);
+}
+
+.site-nav.theme-light .brand-text,
+.site-nav.theme-light .nav-link {
+  color: var(--color-espresso);
+  text-shadow: none;
 }
 
 @media (max-width: 768px) {
@@ -77,7 +120,7 @@ body {
   align-items: center;
   gap: var(--space-md);
   text-decoration: none;
-  mix-blend-mode: difference;
+  color: inherit;
 }
 
 .brand-text {
@@ -85,7 +128,7 @@ body {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #F1E6D3;
+  color: inherit;
   transition: opacity 0.3s ease;
 }
 
@@ -100,7 +143,6 @@ body {
   list-style: none;
   margin: 0;
   padding: 0;
-  mix-blend-mode: difference;
 }
 
 @media (max-width: 900px) {
@@ -114,7 +156,7 @@ body {
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #F1E6D3;
+  color: inherit;
   text-decoration: none;
   position: relative;
   padding: 8px 0;
@@ -135,7 +177,7 @@ body {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background-color: var(--color-on-tertiary-container); /* Ember #E0541F */
+  background-color: #E0541F; /* Ember #E0541F */
 }
 
 .nav-actions {
@@ -144,26 +186,25 @@ body {
   gap: var(--space-md);
 }
 
-/* Solid ember Reserve pill - only filled shape, normal blend mode */
+/* Solid ember Reserve pill - only filled shape */
 .btn-pill {
-  mix-blend-mode: normal;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.65rem 1.75rem;
   border-radius: 9999px;
   background-color: #E0541F;
-  color: #F1E6D3;
+  color: #14100D;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   text-decoration: none;
   border: none;
-  box-shadow: 0 4px 16px rgba(224, 84, 31, 0.28);
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 4px 16px rgba(224, 84, 31, 0.25);
+  transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .btn-pill:hover {
