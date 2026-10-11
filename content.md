@@ -17,12 +17,11 @@ BEAN RAIN (section 4)
 Outline headline: 400 BEANS. ONE CUP.
 Subline: We count them so you don't have to.
 
-MENU (section 5) — title: The Signature Five
+MENU (section 5) — title: The Signature Four
 01 Ember Espresso — Dark cocoa, orange peel, a long finish. — ₹120 — liquid #2A1208
 02 Cortado Noir — Espresso and steamed milk in equal parts. Silk and smoke. — ₹160 — liquid #8A5A35
 03 Burnt Caramel Latte — Torched sugar, whole milk, a pinch of sea salt. — ₹190 — liquid #C68A52
-04 Cold Drip 18H — Steeped for eighteen hours. Clean, bright, dangerously smooth. — ₹210 — liquid #1B0F0A
-05 Ember Tonic — Espresso over tonic and citrus. Sparkling, bitter, alive. — ₹200 — liquid #D9822B
+04 Ember Tonic — Espresso over tonic and citrus. Sparkling, bitter, alive. — ₹200 — liquid #D9822B
 
 PROCESS (section 6) — title: From seed to second sip
 01 GREEN — Raw, pale, grassy. Nothing yet.
@@ -50,7 +49,7 @@ Confirmation: Table requested. See you soon.
 Close: Close
 
 MENU EXTRAS
-Serving: 01 Hot / 02 Hot / 03 Hot / 04 Iced / 05 Iced
+Serving: 01 Hot / 02 Hot / 03 Hot / 04 Iced
 Hint: Scroll to taste
 
 FOOTER

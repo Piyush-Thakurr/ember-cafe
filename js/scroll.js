@@ -8,7 +8,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
  * 2. Dive (Pin 100vh) -> Total Hero+Dive = 180vh
  * 3. Exploded View (Pin 160vh)
  * 4. Bean Rain (Pin 170vh)
- * 5. Menu / Tasting Turntable (Pin 390vh)
+ * 5. Menu / Tasting Turntable (Pin 320vh)
  * 6. Process (Pin 220vh)
  * 7. Atmosphere (Gallery & Marquee ~220vh)
  * 8. Finale (Pin 160vh)
@@ -606,7 +606,7 @@ export class EmberScroll {
   }
 
   // ----------------------------------------------------
-  // 5. MENU (Pinned 390vh)
+  // 5. MENU (Pinned 320vh)
   // ----------------------------------------------------
   buildMenu() {
     const menuSection = document.getElementById('menu');
@@ -624,38 +624,57 @@ export class EmberScroll {
       { num: '01', name: 'Ember Espresso', desc: 'Dark cocoa, orange peel, a long finish.', price: 120, serving: 'HOT', liquid: '#2A1208' },
       { num: '02', name: 'Cortado Noir', desc: 'Espresso and steamed milk in equal parts. Silk and smoke.', price: 160, serving: 'HOT', liquid: '#8A5A35' },
       { num: '03', name: 'Burnt Caramel Latte', desc: 'Torched sugar, whole milk, a pinch of sea salt.', price: 190, serving: 'HOT', liquid: '#C68A52' },
-      { num: '04', name: 'Cold Drip 18H', desc: 'Steeped for eighteen hours. Clean, bright, dangerously smooth.', price: 210, serving: 'ICED', liquid: '#1B0F0A' },
-      { num: '05', name: 'Ember Tonic', desc: 'Espresso over tonic and citrus. Sparkling, bitter, alive.', price: 200, serving: 'ICED', liquid: '#D9822B' }
+      { num: '04', name: 'Ember Tonic', desc: 'Espresso over tonic and citrus. Sparkling, bitter, alive.', price: 200, serving: 'ICED', liquid: '#D9822B' }
     ];
 
     let currentDrinkIndex = 0;
     const priceCounter = { val: 120 };
 
-    const updateMenuDrinkDOM = (index) => {
+    const updateMenuDrinkDOM = (index, immediate = false) => {
       if (index < 0 || index >= drinksData.length) return;
       const data = drinksData[index];
+      const prevIndex = currentDrinkIndex;
       currentDrinkIndex = index;
 
       if (numEl) numEl.textContent = data.num;
       if (servingEl) {
         servingEl.textContent = data.serving;
-        if (data.serving === 'ICED') {
-          servingEl.style.borderColor = 'rgba(120, 180, 255, 0.6)';
-          servingEl.style.color = '#B0D5FF';
-          servingEl.style.background = 'rgba(80, 140, 220, 0.18)';
+        servingEl.style.color = data.serving === 'ICED' ? '#78B4FF' : 'var(--color-ember)';
+      }
+      if (descEl) descEl.textContent = data.desc;
+
+      // Letter rotation stagger on name change
+      if (nameEl) {
+        const renderChars = () => {
+          nameEl.innerHTML = data.name.split('').map(c => 
+            c === ' ' ? '<span class="name-char">&nbsp;</span>' : `<span class="name-char">${c}</span>`
+          ).join('');
+          const newChars = nameEl.querySelectorAll('.name-char');
+          gsap.fromTo(newChars, 
+            { rotateX: -90, opacity: 0 }, 
+            { rotateX: 0, opacity: 1, duration: 0.38, stagger: 0.02, ease: 'power2.out' }
+          );
+        };
+
+        const oldChars = nameEl.querySelectorAll('.name-char');
+        if (!immediate && oldChars.length > 0 && prevIndex !== index) {
+          gsap.to(oldChars, {
+            rotateX: 90,
+            opacity: 0,
+            duration: 0.20,
+            stagger: 0.012,
+            ease: 'power1.in',
+            onComplete: renderChars
+          });
         } else {
-          servingEl.style.borderColor = 'rgba(224, 84, 31, 0.6)';
-          servingEl.style.color = 'var(--color-ember)';
-          servingEl.style.background = 'rgba(224, 84, 31, 0.18)';
+          renderChars();
         }
       }
-      if (nameEl) nameEl.textContent = data.name;
-      if (descEl) descEl.textContent = data.desc;
 
       if (priceEl) {
         gsap.to(priceCounter, {
           val: data.price,
-          duration: 0.45,
+          duration: 0.5,
           ease: 'power2.out',
           roundProps: 'val',
           onUpdate: () => {
@@ -671,24 +690,32 @@ export class EmberScroll {
 
     gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
 
+    const snapPoints = [0.06, 0.33, 0.65, 0.92];
+
     const menuTrigger = ScrollTrigger.create({
       trigger: '#menu',
       start: 'top top',
-      end: '+=390%',
+      end: '+=320%',
       pin: true,
       pinSpacing: true,
       scrub: 0.8,
       invalidateOnRefresh: true,
+      snap: {
+        snapTo: snapPoints,
+        duration: { min: 0.25, max: 0.6 },
+        delay: 0.08,
+        ease: 'power1.inOut'
+      },
       onEnter: () => {
         this.updateSectionState('menu');
         window.emberStage?.setMenuScrub?.(0);
-        updateMenuDrinkDOM(0);
+        updateMenuDrinkDOM(0, true);
         gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
       },
       onEnterBack: () => {
         this.updateSectionState('menu');
         window.emberStage?.setMenuScrub?.(1);
-        updateMenuDrinkDOM(4);
+        updateMenuDrinkDOM(3, true);
         gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 1, pointerEvents: 'auto' });
       },
       onLeave: () => {
@@ -711,7 +738,7 @@ export class EmberScroll {
           gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 1, pointerEvents: 'auto' });
         }
 
-        const drinkIdx = Math.min(4, Math.floor(p / 0.19));
+        const drinkIdx = Math.min(3, Math.floor(p / 0.24));
         if (drinkIdx !== currentDrinkIndex && p < 0.95) {
           updateMenuDrinkDOM(drinkIdx);
           window.emberStage?.setDrinkActive?.(drinkIdx);
@@ -730,10 +757,10 @@ export class EmberScroll {
         if (menuTrigger) {
           const start = menuTrigger.start;
           const totalDistance = menuTrigger.end - menuTrigger.start;
-          const targetP = (idx + 0.4) / 5 * 0.95;
+          const targetP = snapPoints[idx] !== undefined ? snapPoints[idx] : (idx * 0.28 + 0.06);
           const targetScroll = start + targetP * totalDistance;
           if (this.lenis) {
-            this.lenis.scrollTo(targetScroll, { duration: 1.2 });
+            this.lenis.scrollTo(targetScroll, { duration: 1.0 });
           } else {
             window.scrollTo({ top: targetScroll, behavior: 'smooth' });
           }
@@ -746,7 +773,7 @@ export class EmberScroll {
       if (!menuTrigger || !menuTrigger.isActive) return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         e.preventDefault();
-        const nextIdx = Math.min(4, currentDrinkIndex + 1);
+        const nextIdx = Math.min(3, currentDrinkIndex + 1);
         railTicks[nextIdx]?.click();
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -780,6 +807,8 @@ export class EmberScroll {
       });
     };
 
+    gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
+
     const processTrigger = ScrollTrigger.create({
       trigger: '#process',
       start: 'top top',
@@ -787,13 +816,12 @@ export class EmberScroll {
       pin: true,
       pinSpacing: true,
       scrub: 0.8,
-      anticipatePin: 1,
       invalidateOnRefresh: true,
       onEnter: () => {
         this.updateSectionState('process');
         window.emberStage?.setProcessScrub?.(0);
         animateProcessEntry();
-        gsap.set('.process-content-pin', { opacity: 1 });
+        gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
       },
       onEnterBack: () => {
         this.updateSectionState('process');
@@ -801,13 +829,13 @@ export class EmberScroll {
         processSteps.forEach((step, idx) => {
           if (step) step.classList.toggle('is-active', idx === 3);
         });
-        gsap.set('.process-content-pin', { opacity: 1 });
+        gsap.set('.process-content-pin', { opacity: 1, pointerEvents: 'auto' });
       },
       onLeave: () => {
-        gsap.set('.process-content-pin', { opacity: 0 });
+        gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
       },
       onLeaveBack: () => {
-        gsap.set('.process-content-pin', { opacity: 0 });
+        gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
       },
       onUpdate: (self) => {
         if (!self.isActive) return;
@@ -816,11 +844,11 @@ export class EmberScroll {
 
         // Content fade in at entry (0 to 0.08) and fade out at exit (0.92 to 1.0)
         if (p < 0.08) {
-          gsap.set('.process-content-pin', { opacity: p / 0.08 });
+          gsap.set('.process-content-pin', { opacity: p / 0.08, pointerEvents: p > 0.04 ? 'auto' : 'none' });
         } else if (p > 0.92) {
-          gsap.set('.process-content-pin', { opacity: (1.0 - p) / 0.08 });
+          gsap.set('.process-content-pin', { opacity: (1.0 - p) / 0.08, pointerEvents: p < 0.96 ? 'auto' : 'none' });
         } else {
-          gsap.set('.process-content-pin', { opacity: 1 });
+          gsap.set('.process-content-pin', { opacity: 1, pointerEvents: 'auto' });
         }
 
         // Step index based on progress: 0 to 3
