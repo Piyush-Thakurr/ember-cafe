@@ -23,7 +23,8 @@
   padding: 64px 0 64px max(48px, 5vw);
   box-sizing: border-box;
   z-index: 10;
-  pointer-events: auto;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .menu-header {
@@ -182,7 +183,8 @@
   flex-direction: column;
   gap: 28px;
   z-index: 30;
-  pointer-events: auto;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .rail-tick {

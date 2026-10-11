@@ -502,14 +502,15 @@ export class EmberScroll {
         pin: true,
         pinSpacing: true,
         scrub: 0.8,
-        anticipatePin: 1,
         invalidateOnRefresh: true,
         onEnter: () => {
           this.updateSectionState('bean-rain');
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
           window.emberStage?.setBeanRainScrub?.(0);
         },
         onEnterBack: () => {
           this.updateSectionState('bean-rain');
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
           window.emberStage?.setBeanRainScrub?.(1);
         },
         onLeave: () => {
@@ -517,6 +518,7 @@ export class EmberScroll {
         },
         onLeaveBack: () => {
           gsap.set(['.bean-rain-headline-wrap', '.line-left', '.line-right', '.bean-rain-subline'], { opacity: 0 });
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
         },
         onUpdate: (self) => {
           if (!self.isActive) return;
@@ -561,43 +563,44 @@ export class EmberScroll {
       xPercent: 0,
       opacity: 1,
       ease: 'power2.out',
-      duration: 0.16
+      duration: 0.14
     }, 0.38)
     .to('.line-right', {
       xPercent: 0,
       opacity: 1,
       ease: 'power2.out',
-      duration: 0.16
+      duration: 0.14
     }, 0.42)
     .to('.bean-rain-subline', {
       opacity: 1,
       y: 0,
       ease: 'power2.out',
-      duration: 0.14
+      duration: 0.12
     }, 0.48)
     .to('.line-left', {
       yPercent: -100,
       opacity: 0,
       ease: 'power2.in',
       duration: 0.08
-    }, 0.78)
+    }, 0.68)
     .to('.line-right', {
       yPercent: -100,
       opacity: 0,
       ease: 'power2.in',
       duration: 0.08
-    }, 0.81)
+    }, 0.70)
     .to('.bean-rain-subline', {
       yPercent: -100,
       opacity: 0,
       ease: 'power2.in',
       duration: 0.06
-    }, 0.80)
+    }, 0.70)
     .to('.bean-rain-headline-wrap', {
       opacity: 0,
       duration: 0.06,
       ease: 'power2.in'
-    }, 0.82);
+    }, 0.72)
+    .to({}, { duration: 0.22 }, 0.78); // Extend timeline duration strictly to 1.0
 
     return beanRainTl;
   }
@@ -666,6 +669,8 @@ export class EmberScroll {
       });
     };
 
+    gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
+
     const menuTrigger = ScrollTrigger.create({
       trigger: '#menu',
       start: 'top top',
@@ -673,25 +678,24 @@ export class EmberScroll {
       pin: true,
       pinSpacing: true,
       scrub: 0.8,
-      anticipatePin: 1,
       invalidateOnRefresh: true,
       onEnter: () => {
         this.updateSectionState('menu');
         window.emberStage?.setMenuScrub?.(0);
         updateMenuDrinkDOM(0);
-        gsap.set('.menu-content-pin', { opacity: 1 });
+        gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
       },
       onEnterBack: () => {
         this.updateSectionState('menu');
         window.emberStage?.setMenuScrub?.(1);
         updateMenuDrinkDOM(4);
-        gsap.set('.menu-content-pin', { opacity: 1 });
+        gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 1, pointerEvents: 'auto' });
       },
       onLeave: () => {
-        gsap.set('.menu-content-pin', { opacity: 0 });
+        gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
       },
       onLeaveBack: () => {
-        gsap.set('.menu-content-pin', { opacity: 0 });
+        gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
       },
       onUpdate: (self) => {
         if (!self.isActive) return;
@@ -700,11 +704,11 @@ export class EmberScroll {
 
         // Content fade in at entry (0 to 0.08) and fade out at exit (0.92 to 1.0)
         if (p < 0.08) {
-          gsap.set('.menu-content-pin', { opacity: p / 0.08 });
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: p / 0.08, pointerEvents: p > 0.04 ? 'auto' : 'none' });
         } else if (p > 0.92) {
-          gsap.set('.menu-content-pin', { opacity: (1.0 - p) / 0.08 });
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: (1.0 - p) / 0.08, pointerEvents: p < 0.96 ? 'auto' : 'none' });
         } else {
-          gsap.set('.menu-content-pin', { opacity: 1 });
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 1, pointerEvents: 'auto' });
         }
 
         const drinkIdx = Math.min(4, Math.floor(p / 0.19));
