@@ -215,14 +215,17 @@ export class EmberScroll {
   }
 
   // ----------------------------------------------------
-  // 1. HERO (Pinned 80vh, state 1 spread)
+  // ----------------------------------------------------
+  // 1. HERO (Pinned 60vh, state 1 spread -> letters fly past camera)
   // ----------------------------------------------------
   buildHero() {
+    gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
+
     const heroTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#hero',
         start: 'top top',
-        end: '+=80%',
+        end: '+=60%',
         pin: true,
         pinSpacing: true,
         scrub: 0.8,
@@ -230,10 +233,12 @@ export class EmberScroll {
         invalidateOnRefresh: true,
         onEnter: () => {
           this.updateSectionState('hero');
+          gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setHeroScrub?.(0);
         },
         onEnterBack: () => {
           this.updateSectionState('hero');
+          gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setHeroScrub?.(1);
         },
         onUpdate: (self) => {
@@ -248,28 +253,36 @@ export class EmberScroll {
       opacity: 0,
       y: -25,
       ease: 'power3.inOut',
-      duration: 0.3
+      duration: 0.25
     }, 0);
 
-    // EMBER letters spread apart: E & M to left, E & R to right
-    heroTl.to('#char-e1', { xPercent: -55, opacity: 0.62, ease: 'power3.inOut', duration: 1.0 }, 0)
-          .to('#char-m',  { xPercent: -28, opacity: 0.58, ease: 'power3.inOut', duration: 1.0 }, 0)
-          .to('#char-b',  { opacity: 0.55, scale: 0.90, ease: 'power3.inOut', duration: 0.8 }, 0)
-          .to('#char-e2', { xPercent: 28,  opacity: 0.58, ease: 'power3.inOut', duration: 1.0 }, 0)
-          .to('#char-r',  { xPercent: 50,  opacity: 0.62, ease: 'power3.inOut', duration: 1.0 }, 0);
+    // Initial gentle spread (0 to 0.40)
+    heroTl.to('#char-e1', { xPercent: -55, opacity: 0.85, ease: 'power2.out', duration: 0.40 }, 0)
+          .to('#char-m',  { xPercent: -28, opacity: 0.85, ease: 'power2.out', duration: 0.40 }, 0)
+          .to('#char-b',  { opacity: 0.80, scale: 0.95, ease: 'power2.out', duration: 0.40 }, 0)
+          .to('#char-e2', { xPercent: 28,  opacity: 0.85, ease: 'power2.out', duration: 0.40 }, 0)
+          .to('#char-r',  { xPercent: 50,  opacity: 0.85, ease: 'power2.out', duration: 0.40 }, 0);
+
+    // Letters fly outward past camera (scale up to 3.5x, fading) by 15% checkpoint (0.40 to 1.0)
+    heroTl.to('#char-e1', { xPercent: -220, yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.60 }, 0.40)
+          .to('#char-m',  { xPercent: -120, yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.60 }, 0.40)
+          .to('#char-b',  { xPercent: 0,    yPercent: -85, scale: 3.8, opacity: 0, ease: 'power2.in', duration: 0.60 }, 0.40)
+          .to('#char-e2', { xPercent: 120,  yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.60 }, 0.40)
+          .to('#char-r',  { xPercent: 220,  yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.60 }, 0.40)
+          .to('.hero-wordmark-container', { opacity: 0, duration: 0.20 }, 0.80);
 
     return heroTl;
   }
 
   // ----------------------------------------------------
-  // 2. DIVE (Pinned 100vh, camera into crema, ripples)
+  // 2. DIVE (Pinned 120vh, camera into crema, ripples, headline hold)
   // ----------------------------------------------------
   buildDive() {
     const diveTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#dive',
         start: 'top top',
-        end: '+=100%',
+        end: '+=120%',
         pin: true,
         pinSpacing: true,
         scrub: 0.8,
@@ -293,101 +306,143 @@ export class EmberScroll {
       }
     });
 
-    // 0 to 35% of dive: each EMBER letter flies outward past camera
-    diveTl.to('#char-e1', { xPercent: -180, yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
-          .to('#char-m',  { xPercent: -90,  yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
-          .to('#char-b',  { xPercent: 0,    yPercent: -85, scale: 3.8, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
-          .to('#char-e2', { xPercent: 90,   yPercent: -65, scale: 3.2, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
-          .to('#char-r',  { xPercent: 180,  yPercent: -45, scale: 3.5, opacity: 0, ease: 'power2.in', duration: 0.35 }, 0)
-          .to('.hero-wordmark-container', { opacity: 0, duration: 0.05 }, 0.35);
-
-    // Warm atmospheric espresso vignette overlay (never pure black)
+    // Warm atmospheric espresso vignette overlay (never pure black, max 0.35 opacity)
     diveTl.to('.dive-fade-overlay', {
-      opacity: 0.50,
+      opacity: 0.35,
       ease: 'power2.inOut',
-      duration: 0.25
-    }, 0.30)
+      duration: 0.20
+    }, 0.25)
     .to('.dive-fade-overlay', {
       opacity: 0,
       ease: 'power2.inOut',
       duration: 0.15
-    }, 0.65);
+    }, 0.75);
 
     // Masked line reveal for "Look closer. The crema is a map."
-    diveTl.fromTo('.line-text-1', {
+    // 40% to 55% of overall range: headline clearly visible above canvas on two lines, holding for 35vh+ with slow parallax drift
+    diveTl.fromTo('.dive-headline', {
+      opacity: 0,
+      y: 0
+    }, {
+      opacity: 1,
+      duration: 0.08,
+      ease: 'power2.out'
+    }, 0.28)
+    .fromTo('.line-text-1', {
       yPercent: 110
     }, {
       yPercent: 0,
       ease: 'power3.out',
-      duration: 0.10
-    }, 0.30)
+      duration: 0.08
+    }, 0.28)
     .fromTo('.line-text-2', {
       yPercent: 110
     }, {
       yPercent: 0,
       ease: 'power3.out',
-      duration: 0.10
-    }, 0.36)
+      duration: 0.08
+    }, 0.34)
     .to('.dive-headline', {
-      y: -30,
+      y: -28,
       ease: 'none',
-      duration: 0.45
-    }, 0.36)
+      duration: 0.40 // 40% of 120vh = 48vh hold > 35vh requirement!
+    }, 0.34)
     .to('.dive-headline', {
       opacity: 0,
-      y: -50,
+      y: -48,
       ease: 'power2.in',
-      duration: 0.12
-    }, 0.84);
+      duration: 0.10
+    }, 0.74);
 
     return diveTl;
   }
 
   // ----------------------------------------------------
-  // 3. EXPLODED VIEW (Pinned 160vh)
+  // 3. EXPLODED VIEW (Pinned 160vh, focus-step system)
   // ----------------------------------------------------
+  updateExplodedFocus(p) {
+    const card1 = document.getElementById('focus-step-1');
+    const card2 = document.getElementById('focus-step-2');
+    const card3 = document.getElementById('focus-step-3');
+    const markerGroup = document.getElementById('focus-marker-group');
+    const elbowLine = document.getElementById('focus-elbow-line');
+
+    if (!card1 || !card2 || !card3 || !markerGroup || !elbowLine) return;
+
+    let activeStep = 0;
+    if (p >= 0.22 && p < 0.45) {
+      activeStep = 1;
+    } else if (p >= 0.45 && p < 0.68) {
+      activeStep = 2;
+    } else if (p >= 0.68 && p <= 0.90) {
+      activeStep = 3;
+    }
+
+    card1.classList.toggle('is-active', activeStep === 1);
+    card2.classList.toggle('is-active', activeStep === 2);
+    card3.classList.toggle('is-active', activeStep === 3);
+
+    if (activeStep === 0) {
+      markerGroup.setAttribute('opacity', '0');
+      elbowLine.setAttribute('opacity', '0');
+      return;
+    }
+
+    // Get 3D coords of active step marker projected on screen
+    const coords = window.emberStage?.getExplodedFocusCoords?.(activeStep);
+    if (!coords) return;
+
+    const mx = Math.round(coords.x);
+    const my = Math.round(coords.y);
+
+    markerGroup.setAttribute('transform', `translate(${mx}, ${my})`);
+    markerGroup.setAttribute('opacity', '1');
+
+    // Get active card anchor
+    const activeCard = activeStep === 1 ? card1 : (activeStep === 2 ? card2 : card3);
+    const rect = activeCard.getBoundingClientRect();
+
+    let cx, cy;
+    if (activeStep === 2) {
+      // Step 2 card is on the right: anchor on left edge of card
+      cx = Math.round(rect.left - 12);
+      cy = Math.round(rect.top + rect.height * 0.45);
+    } else {
+      // Step 1 and 3 cards are on the left: anchor on right edge of card
+      cx = Math.round(rect.right + 12);
+      cy = Math.round(rect.top + rect.height * 0.45);
+    }
+
+    // Elbow line: short diagonal from marker, then horizontal to text block
+    let d = '';
+    if (cx < mx) {
+      // Card is to the left of marker
+      const kx = Math.round(mx - Math.min(50, Math.max(25, (mx - cx) * 0.35)));
+      d = `M ${mx} ${my} L ${kx} ${cy} L ${cx} ${cy}`;
+    } else {
+      // Card is to the right of marker
+      const kx = Math.round(mx + Math.min(50, Math.max(25, (cx - mx) * 0.35)));
+      d = `M ${mx} ${my} L ${kx} ${cy} L ${cx} ${cy}`;
+    }
+
+    elbowLine.setAttribute('d', d);
+    elbowLine.setAttribute('opacity', '1');
+  }
+
+  clearExplodedFocus() {
+    const card1 = document.getElementById('focus-step-1');
+    const card2 = document.getElementById('focus-step-2');
+    const card3 = document.getElementById('focus-step-3');
+    const markerGroup = document.getElementById('focus-marker-group');
+    const elbowLine = document.getElementById('focus-elbow-line');
+    if (card1) card1.classList.remove('is-active');
+    if (card2) card2.classList.remove('is-active');
+    if (card3) card3.classList.remove('is-active');
+    if (markerGroup) markerGroup.setAttribute('opacity', '0');
+    if (elbowLine) elbowLine.setAttribute('opacity', '0');
+  }
+
   buildExploded() {
-    let cachedOrigin = null;
-    let cachedRoast = null;
-    let cachedNotes = null;
-    let lineO = null, dotO = null;
-    let lineR = null, dotR = null;
-    let lineN = null, dotN = null;
-    let tagEls = null;
-
-    const updateRects = () => {
-      const originEl = document.getElementById('label-origin');
-      const roastEl = document.getElementById('label-roast');
-      const notesEl = document.getElementById('label-notes');
-      if (originEl) {
-        const r = originEl.getBoundingClientRect();
-        cachedOrigin = { x: r.right + 12, y: r.top + r.height / 2 };
-      }
-      if (roastEl) {
-        const r = roastEl.getBoundingClientRect();
-        cachedRoast = { x: r.left - 12, y: r.top + r.height / 2 };
-      }
-      if (notesEl) {
-        const r = notesEl.getBoundingClientRect();
-        cachedNotes = { x: r.right + 12, y: r.top + r.height / 2 };
-      }
-      if (!lineO) {
-        lineO = document.getElementById('line-origin');
-        dotO = document.getElementById('dot-origin');
-        lineR = document.getElementById('line-roast');
-        dotR = document.getElementById('dot-roast');
-        lineN = document.getElementById('line-notes');
-        dotN = document.getElementById('dot-notes');
-        tagEls = {
-          spoon: { tick: document.getElementById('tick-spoon'), dot: document.getElementById('dot-spoon'), text: document.getElementById('tag-spoon') },
-          crema: { tick: document.getElementById('tick-crema'), dot: document.getElementById('dot-crema'), text: document.getElementById('tag-crema') },
-          coffee: { tick: document.getElementById('tick-coffee'), dot: document.getElementById('dot-coffee'), text: document.getElementById('tag-coffee') },
-          cup: { tick: document.getElementById('tick-cup'), dot: document.getElementById('dot-cup'), text: document.getElementById('tag-cup') },
-          saucer: { tick: document.getElementById('tick-saucer'), dot: document.getElementById('dot-saucer'), text: document.getElementById('tag-saucer') }
-        };
-      }
-    };
-
     const explodedTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#exploded',
@@ -402,136 +457,29 @@ export class EmberScroll {
           this.updateSectionState('exploded');
           gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setExplodedScrub?.(0);
-          updateRects();
+          this.updateExplodedFocus(0);
         },
         onEnterBack: () => {
           this.updateSectionState('exploded');
           window.emberStage?.setExplodedScrub?.(1);
-          updateRects();
+          this.updateExplodedFocus(1);
+        },
+        onLeave: () => {
+          this.clearExplodedFocus();
+        },
+        onLeaveBack: () => {
+          this.clearExplodedFocus();
         },
         onUpdate: (self) => {
           if (!self.isActive) return;
           const p = self.progress;
-          const separationProgress = Math.min(p / 0.25, 1.0);
-          window.emberStage?.setExplodedScrub?.(separationProgress);
-
-          if (!cachedOrigin) updateRects();
-
-          const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
-          if (coords) {
-            if (cachedOrigin && cachedRoast && cachedNotes) {
-              // 1. ORIGIN leader line
-              const x1 = cachedOrigin.x;
-              const y1 = cachedOrigin.y;
-              const x2 = coords.cremaLeft.x;
-              const y2 = coords.cremaLeft.y;
-              if (lineO) {
-                lineO.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
-                const len = Math.hypot(x2 - x1, y2 - y1);
-                lineO.style.strokeDasharray = `${len}`;
-                if (p < 0.25) lineO.style.strokeDashoffset = `${len}`;
-                else if (p >= 0.45) lineO.style.strokeDashoffset = '0';
-                else lineO.style.strokeDashoffset = `${len * (1 - (p - 0.25) / 0.20)}`;
-              }
-              if (dotO) {
-                dotO.setAttribute('cx', x2);
-                dotO.setAttribute('cy', y2);
-              }
-
-              // 2. ROAST leader line
-              const rx1 = cachedRoast.x;
-              const ry1 = cachedRoast.y;
-              const rx2 = coords.coffeeRight.x;
-              const ry2 = coords.coffeeRight.y;
-              if (lineR) {
-                lineR.setAttribute('d', `M ${rx1} ${ry1} L ${rx2} ${ry2}`);
-                const rlen = Math.hypot(rx2 - rx1, ry2 - ry1);
-                lineR.style.strokeDasharray = `${rlen}`;
-                if (p < 0.45) lineR.style.strokeDashoffset = `${rlen}`;
-                else if (p >= 0.65) lineR.style.strokeDashoffset = '0';
-                else lineR.style.strokeDashoffset = `${rlen * (1 - (p - 0.45) / 0.20)}`;
-              }
-              if (dotR) {
-                dotR.setAttribute('cx', rx2);
-                dotR.setAttribute('cy', ry2);
-              }
-
-              // 3. NOTES leader line
-              const nx1 = cachedNotes.x;
-              const ny1 = cachedNotes.y;
-              const nx2 = coords.cupLeft.x;
-              const ny2 = coords.cupLeft.y;
-              if (lineN) {
-                lineN.setAttribute('d', `M ${nx1} ${ny1} L ${nx2} ${ny2}`);
-                const nlen = Math.hypot(nx2 - nx1, ny2 - ny1);
-                lineN.style.strokeDasharray = `${nlen}`;
-                if (p < 0.65) lineN.style.strokeDashoffset = `${nlen}`;
-                else if (p >= 0.85) lineN.style.strokeDashoffset = '0';
-                else lineN.style.strokeDashoffset = `${nlen * (1 - (p - 0.65) / 0.20)}`;
-              }
-              if (dotN) {
-                dotN.setAttribute('cx', nx2);
-                dotN.setAttribute('cy', ny2);
-              }
-            }
-
-            // Update layer name tags
-            const setLayerTag = (id, x, y, dir) => {
-              const el = tagEls?.[id];
-              if (el && el.tick && el.dot && el.text) {
-                el.dot.setAttribute('cx', x);
-                el.dot.setAttribute('cy', y);
-                el.tick.setAttribute('x1', x);
-                el.tick.setAttribute('y1', y);
-                el.tick.setAttribute('x2', x + dir * 20);
-                el.tick.setAttribute('y2', y);
-                el.text.setAttribute('x', x + dir * 28);
-                el.text.setAttribute('y', y);
-                el.text.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
-              }
-            };
-
-            setLayerTag('spoon', coords.spoonRight.x, coords.spoonRight.y, 1);
-            setLayerTag('crema', coords.cremaRight.x, coords.cremaRight.y, 1);
-            setLayerTag('coffee', coords.coffeeLeft.x, coords.coffeeLeft.y, -1);
-            setLayerTag('cup', coords.cupRight.x, coords.cupRight.y, 1);
-            setLayerTag('saucer', coords.saucerRight.x, coords.saucerRight.y, 1);
-          }
+          window.emberStage?.setExplodedScrub?.(p);
+          this.updateExplodedFocus(p);
         }
       }
     });
 
-    // Layer name tags fade in during separation
-    explodedTl.to('.tag-tick, .tag-dot, .exploded-tag-text', {
-      opacity: 1,
-      ease: 'power2.out',
-      duration: 0.15
-    }, 0.10);
-
-    // Reveal labels across hold
-    explodedTl.to('#label-origin, .line-origin, .dot-origin', {
-      opacity: 1,
-      y: 0,
-      ease: 'power2.out',
-      duration: 0.12
-    }, 0.25)
-    .to('#label-roast, .line-roast, .dot-roast', {
-      opacity: 1,
-      y: 0,
-      ease: 'power2.out',
-      duration: 0.12
-    }, 0.45)
-    .to('#label-notes, .line-notes, .dot-notes', {
-      opacity: 1,
-      y: 0,
-      ease: 'power2.out',
-      duration: 0.12
-    }, 0.65)
-    .to(['.exploded-svg-layer', '.exploded-label'], {
-      opacity: 0,
-      ease: 'power3.inOut',
-      duration: 0.08
-    }, 0.92);
+    explodedTl.to({}, { duration: 1 });
 
     return explodedTl;
   }
@@ -540,7 +488,7 @@ export class EmberScroll {
   // 4. BEAN RAIN (Pinned 170vh)
   // ----------------------------------------------------
   buildBeanRain() {
-    gsap.set('.bean-rain-headline-wrap', { skewY: 0, rotation: 0 });
+    gsap.set('.bean-rain-headline-wrap', { skewY: 0, rotation: 0, opacity: 0 });
     gsap.set('.line-left', { xPercent: -70, opacity: 0 });
     gsap.set('.line-right', { xPercent: 70, opacity: 0 });
     gsap.set('.bean-rain-subline', { opacity: 0, y: 24 });
@@ -563,6 +511,12 @@ export class EmberScroll {
         onEnterBack: () => {
           this.updateSectionState('bean-rain');
           window.emberStage?.setBeanRainScrub?.(1);
+        },
+        onLeave: () => {
+          gsap.set(['.bean-rain-headline-wrap', '.line-left', '.line-right', '.bean-rain-subline'], { opacity: 0 });
+        },
+        onLeaveBack: () => {
+          gsap.set(['.bean-rain-headline-wrap', '.line-left', '.line-right', '.bean-rain-subline'], { opacity: 0 });
         },
         onUpdate: (self) => {
           if (!self.isActive) return;
@@ -598,7 +552,12 @@ export class EmberScroll {
       }
     });
 
-    beanRainTl.to('.line-left', {
+    beanRainTl.to('.bean-rain-headline-wrap', {
+      opacity: 1,
+      duration: 0.08,
+      ease: 'power2.out'
+    }, 0.35)
+    .to('.line-left', {
       xPercent: 0,
       opacity: 1,
       ease: 'power2.out',
@@ -633,7 +592,12 @@ export class EmberScroll {
       opacity: 0,
       ease: 'power2.in',
       duration: 0.06
-    }, 0.80);
+    }, 0.80)
+    .to('.bean-rain-headline-wrap', {
+      opacity: 0,
+      duration: 0.06,
+      ease: 'power2.in'
+    }, 0.82);
 
     return beanRainTl;
   }
@@ -1090,7 +1054,7 @@ export class EmberScroll {
         window.emberStage?.setExplodedScrub?.(this.targets()[0].p);
       }
     }, 0)
-    .to(['#label-origin', '#label-roast', '#label-notes'], { opacity: 1, y: 0, stagger: 0.2 }, 0.2);
+    .to(['#focus-step-1', '#focus-step-2', '#focus-step-3'], { opacity: 1, y: 0, stagger: 0.2 }, 0.2);
 
     // Mobile Bean Rain
     gsap.timeline({

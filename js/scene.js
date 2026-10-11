@@ -428,7 +428,8 @@ export class EmberScene {
           }
         }
 
-        gl_FragColor = vec4(crema, 1.0);
+        uniform float uOpacity;
+        gl_FragColor = vec4(crema, uOpacity);
       }
     `;
 
@@ -442,13 +443,17 @@ export class EmberScene {
         uColor: { value: new THREE.Color(0x2a1208) },
         uRipple: { value: 0.0 },
         uShockwave: { value: 0.0 },
-        uDissolve: { value: 0.0 }
+        uDissolve: { value: 0.0 },
+        uOpacity: { value: 1.0 }
       }
     });
 
     const liquidGeometry = new THREE.CircleGeometry(1.10, 48);
     this.liquidMesh = new THREE.Mesh(liquidGeometry, this.cremaMaterial);
+    this.liquidMesh.rotation.order = 'YXZ';
     this.liquidMesh.rotation.x = -Math.PI / 2;
+    this.liquidMesh.rotation.y = 0;
+    this.liquidMesh.rotation.z = 0;
     this.liquidMesh.position.y = 0.52;
     this.liquidMesh.receiveShadow = false;
     this.cupGroup.add(this.liquidMesh);
@@ -458,10 +463,14 @@ export class EmberScene {
     // 1. Crema Disc Mesh (Uses same caramel crema shader as hero: radial #C68A52 to #8A5A35 with ripples)
     this.cremaDiscMaterial = this.cremaMaterial.clone();
     this.cremaDiscMaterial.side = THREE.DoubleSide;
+    this.cremaDiscMaterial.transparent = true;
     const foamGeo = new THREE.CircleGeometry(1.06, 48);
     this.foamMesh = new THREE.Mesh(foamGeo, this.cremaDiscMaterial);
+    this.foamMesh.rotation.order = 'YXZ';
     this.foamMesh.rotation.x = -Math.PI / 2;
-    this.foamMesh.position.y = 0.52;
+    this.foamMesh.rotation.y = 0;
+    this.foamMesh.rotation.z = 0;
+    this.foamMesh.position.set(0, 0.52, 0);
     this.foamMesh.visible = false;
     this.cupGroup.add(this.foamMesh);
 
@@ -477,6 +486,7 @@ export class EmberScene {
     `;
     const coffeeFragmentShader = `
       uniform float uDissolve;
+      uniform float uOpacity;
       varying vec2 vUv;
       void main() {
         vec2 uv = vUv - vec2(0.5);
@@ -505,16 +515,18 @@ export class EmberScene {
           }
         }
 
-        gl_FragColor = vec4(col, 1.0);
+        gl_FragColor = vec4(col, uOpacity);
       }
     `;
     const coffeeMat = new THREE.ShaderMaterial({
       vertexShader: coffeeVertexShader,
       fragmentShader: coffeeFragmentShader,
       uniforms: {
-        uDissolve: { value: 0.0 }
+        uDissolve: { value: 0.0 },
+        uOpacity: { value: 1.0 }
       },
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      transparent: true
     });
     this.coffeeMaterial = coffeeMat;
     const coffeeCircle = new THREE.Mesh(coffeeCircleGeo, coffeeMat);
@@ -528,12 +540,16 @@ export class EmberScene {
       opacity: 0.85,
       side: THREE.DoubleSide
     });
+    this.coffeeGlowMat = coffeeGlowMat;
     const coffeeGlow = new THREE.Mesh(coffeeGlowGeo, coffeeGlowMat);
     coffeeGlow.position.z = 0.002;
     this.coffeeMesh.add(coffeeGlow);
 
+    this.coffeeMesh.rotation.order = 'YXZ';
     this.coffeeMesh.rotation.x = -Math.PI / 2;
-    this.coffeeMesh.position.y = 0.50;
+    this.coffeeMesh.rotation.y = 0;
+    this.coffeeMesh.rotation.z = 0;
+    this.coffeeMesh.position.set(0, 0.50, 0);
     this.coffeeMesh.visible = false;
     this.cupGroup.add(this.coffeeMesh);
 
@@ -542,7 +558,9 @@ export class EmberScene {
     const spoonMat = new THREE.MeshStandardMaterial({
       color: 0xd4b278, // Warm artisanal brushed brass
       roughness: 0.28,
-      metalness: 0.88
+      metalness: 0.88,
+      transparent: true,
+      opacity: 1.0
     });
     this.setupDissolveMaterial(spoonMat);
     this.spoonMaterial = spoonMat;
@@ -566,6 +584,38 @@ export class EmberScene {
     this.spoonMesh.position.set(0, 0.55, 0);
     this.spoonMesh.visible = false;
     this.cupGroup.add(this.spoonMesh);
+  }
+
+  setLayerOpacities(opacities = {}) {
+    const spoonOp = opacities.spoon !== undefined ? opacities.spoon : 1.0;
+    const cremaOp = opacities.crema !== undefined ? opacities.crema : 1.0;
+    const coffeeOp = opacities.coffee !== undefined ? opacities.coffee : 1.0;
+    const cupOp = opacities.cup !== undefined ? opacities.cup : 1.0;
+    const saucerOp = opacities.saucer !== undefined ? opacities.saucer : 1.0;
+
+    if (this.spoonMaterial) {
+      this.spoonMaterial.transparent = spoonOp < 0.999;
+      this.spoonMaterial.opacity = spoonOp;
+    }
+    if (this.cremaDiscMaterial && this.cremaDiscMaterial.uniforms && this.cremaDiscMaterial.uniforms.uOpacity) {
+      this.cremaDiscMaterial.transparent = cremaOp < 0.999;
+      this.cremaDiscMaterial.uniforms.uOpacity.value = cremaOp;
+    }
+    if (this.coffeeMaterial && this.coffeeMaterial.uniforms && this.coffeeMaterial.uniforms.uOpacity) {
+      this.coffeeMaterial.transparent = coffeeOp < 0.999;
+      this.coffeeMaterial.uniforms.uOpacity.value = coffeeOp;
+    }
+    if (this.coffeeGlowMat) {
+      this.coffeeGlowMat.opacity = 0.85 * coffeeOp;
+    }
+    if (this.cupGlazeMaterial) {
+      this.cupGlazeMaterial.transparent = cupOp < 0.999;
+      this.cupGlazeMaterial.opacity = cupOp;
+    }
+    if (this.saucerGlazeMaterial) {
+      this.saucerGlazeMaterial.transparent = saucerOp < 0.999;
+      this.saucerGlazeMaterial.opacity = saucerOp;
+    }
   }
 
   setLayersDissolve(val) {
@@ -1634,7 +1684,7 @@ export class EmberScene {
 
   // --- STAGE 2A SCROLL SCRUBBING APIS ---
 
-  // State 1: Cup scales ~1 -> 1.6 (base 0.70 -> 1.12), tilts ~ -7.5 deg
+  // State 1: Cup scales ~0.70 -> 1.15, tilts forward ~65° on X so crema faces camera by 15% checkpoint
   setHeroScrub(progress) {
     this.scrub.sectionMode = 'hero';
     if (this.cupGroup) this.cupGroup.visible = true;
@@ -1643,10 +1693,21 @@ export class EmberScene {
     if (this.menuBgPlane) this.menuBgPlane.visible = false;
     if (this.beanMesh) this.beanMesh.visible = true;
 
-    this.scrub.heroScale = 0.70 + progress * 0.42; // scales ~1.6x
-    this.scrub.heroTiltZ = -progress * 0.13;       // -7.5 degrees
-    this.scrub.heroTiltX = 0.12 + progress * 0.14; // slight pitch
-    this.scrub.cupPosY = -1.14 + progress * 0.28;
+    const p = Math.min(Math.max(progress, 0.0), 1.0);
+    // At checkpoint 15% (51vh / 60vh = 0.85): letters fly past camera, cup tilts forward ~65 deg (1.134 rad)
+    const tiltT = Math.max(0.0, (p - 0.35) / 0.65);
+    const easeTilt = tiltT * tiltT;
+
+    this.scrub.heroScale = THREE.MathUtils.lerp(0.70, 1.15, p);
+    this.scrub.heroTiltZ = -0.02 * (1.0 - easeTilt);
+    this.scrub.heroTiltX = THREE.MathUtils.lerp(0.12, 1.134, easeTilt); // 65 deg tilt on X!
+    this.scrub.cupPosY = THREE.MathUtils.lerp(-1.14, -0.75, p);
+
+    this.scrub.cameraZ = 6.1;
+    this.scrub.cameraY = THREE.MathUtils.lerp(0.25, 0.10, easeTilt);
+    this.scrub.cameraLookY = THREE.MathUtils.lerp(-0.38, -0.65, easeTilt);
+    this.camera.fov = 36;
+    this.camera.updateProjectionMatrix();
 
     if (this.foamMesh) this.foamMesh.visible = false;
     if (this.coffeeMesh) this.coffeeMesh.visible = false;
@@ -1657,12 +1718,12 @@ export class EmberScene {
     this.renderer.toneMappingExposure = 1.15;
 
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
-      this.steamMaterial.uniforms.uSteamAlpha.value = 1.0;
-      if (this.steamParticles) this.steamParticles.visible = true;
+      this.steamMaterial.uniforms.uSteamAlpha.value = 1.0 - easeTilt;
+      if (this.steamParticles) this.steamParticles.visible = easeTilt < 0.9;
     }
   }
 
-  // State 2: Camera dollies into crema, ripple reacts to scroll velocity
+  // State 2: Camera dollies into crema, ripple shockwaves expand, smooth pullback for Exploded
   setDiveScrub(progress, velocity = 0) {
     this.scrub.sectionMode = 'dive';
     if (this.cupGroup) this.cupGroup.visible = true;
@@ -1683,38 +1744,34 @@ export class EmberScene {
     if (this.beanRainKey) this.beanRainKey.intensity = 0.0;
     this.renderer.toneMappingExposure = 1.15;
 
-    // Fade steam smoothly during dive into crema surface to prevent point-sprite overdraw
     if (this.steamMaterial && this.steamMaterial.uniforms.uSteamAlpha) {
-      const alpha = progress < 0.25 ? 1.0 - (progress / 0.25) : (progress > 0.75 ? (progress - 0.75) / 0.25 : 0.0);
-      this.steamMaterial.uniforms.uSteamAlpha.value = alpha;
-      if (this.steamParticles) this.steamParticles.visible = alpha > 0.01;
+      this.steamMaterial.uniforms.uSteamAlpha.value = 0.0;
+      if (this.steamParticles) this.steamParticles.visible = false;
     }
 
-    // Camera dollies down into crema (0 to 0.65), then pulls back for Exploded (0.65 to 1.0)
-    if (progress <= 0.40) {
-      // Phase 2: 0 to 40%:
-      // Cup tilts forward ~65° (1.134 rad) so crema faces camera
-      // Camera FOV 40 to 75 with ease-in dolly toward crema
-      const t = progress / 0.40;
+    if (progress <= 0.35) {
+      // 0 to 35% of Dive (checkpoint 30% of 340vh = 102vh):
+      // Cup is tilted 65 deg; camera dollies in until crema fills the screen!
+      const t = progress / 0.35;
       const easeDolly = t * t;
-      this.camera.fov = THREE.MathUtils.lerp(40, 75, easeDolly);
+      this.camera.fov = THREE.MathUtils.lerp(36, 75, easeDolly);
       this.camera.updateProjectionMatrix();
 
-      this.scrub.heroTiltX = THREE.MathUtils.lerp(0.26, 1.134, t);
-      this.scrub.heroTiltZ = THREE.MathUtils.lerp(-0.13, 0.0, t);
-      this.scrub.heroScale = THREE.MathUtils.lerp(1.12, 1.45, easeDolly);
-      this.scrub.cupPosY = THREE.MathUtils.lerp(-0.86, -0.65, easeDolly);
+      this.scrub.heroTiltX = 1.134; // 65 degrees
+      this.scrub.heroTiltZ = 0.0;
+      this.scrub.heroScale = THREE.MathUtils.lerp(1.15, 1.45, easeDolly);
+      this.scrub.cupPosY = THREE.MathUtils.lerp(-0.75, -0.65, easeDolly);
 
       this.scrub.cameraZ = THREE.MathUtils.lerp(6.1, 2.2, easeDolly);
-      this.scrub.cameraY = THREE.MathUtils.lerp(0.25, -0.65, easeDolly);
-      this.scrub.cameraLookY = THREE.MathUtils.lerp(-0.38, -0.65, easeDolly);
+      this.scrub.cameraY = THREE.MathUtils.lerp(0.10, -0.65, easeDolly);
+      this.scrub.cameraLookY = -0.65;
 
       if (this.cremaMaterial && this.cremaMaterial.uniforms.uShockwave) {
         this.cremaMaterial.uniforms.uShockwave.value = 0.0;
       }
-    } else if (progress <= 0.65) {
-      // Phase 2: 40 to 65%:
-      // Crema fills screen, ripple shockwave rings expand from centre of crema
+    } else if (progress <= 0.75) {
+      // 35% to 75% of Dive (checkpoints 40% to 55% of 340vh = 136vh to 187vh):
+      // Crema fills screen, concentric ripple shockwaves expand
       this.camera.fov = 75;
       this.camera.updateProjectionMatrix();
 
@@ -1727,14 +1784,14 @@ export class EmberScene {
       this.scrub.cameraY = -0.65;
       this.scrub.cameraLookY = -0.65;
 
-      const shockwaveT = (progress - 0.40) / 0.25;
+      const shockwaveT = (progress - 0.35) / 0.40;
       if (this.cremaMaterial && this.cremaMaterial.uniforms.uShockwave) {
         this.cremaMaterial.uniforms.uShockwave.value = shockwaveT;
       }
     } else {
-      // Phase 2: 65 to 100%:
-      // Camera pulls back and up to 3/4 overhead angle of exploded view
-      const p = (progress - 0.65) / 0.35;
+      // 75% to 100% of Dive:
+      // Camera pulls back and up to 3/4 overhead angle of Exploded View
+      const p = (progress - 0.75) / 0.25;
       this.camera.fov = THREE.MathUtils.lerp(75, 36, p);
       this.camera.updateProjectionMatrix();
 
@@ -1752,14 +1809,13 @@ export class EmberScene {
       }
     }
 
-    // Ripple shader reacts to velocity
     if (this.cremaMaterial && this.cremaMaterial.uniforms.uRipple) {
-      this.cremaMaterial.uniforms.uRipple.value = Math.min(Math.abs(velocity) * 0.08, 0.45);
+      this.cremaMaterial.uniforms.uRipple.value = Math.min(Math.abs(velocity) * 0.12, 0.45);
     }
   }
 
-  // Exploded View: cup components separate along Y centre line with even 0.50 visible gaps
-  // Exploded View: camera tilted 18° down, stack scaled up 20%, even layer gaps, 25% dimmed beans
+  // Exploded View: 5 layers separate with even 0.52 gaps along vertical center axis
+  // Focus-step system: camera eases to 3/4 close-up of each layer; non-focused layers fade to 20%
   setExplodedScrub(progress) {
     this.scrub.sectionMode = 'exploded';
     if (this.cupGroup) this.cupGroup.visible = true;
@@ -1783,41 +1839,90 @@ export class EmberScene {
 
     if (!this.cupMesh || !this.saucerMesh) return;
 
-    this.camera.fov = 36;
-    this.camera.updateProjectionMatrix();
-
-    this.scrub.cameraY = 0.40;
-    this.scrub.cameraLookY = -0.10;
-    this.scrub.heroTiltZ = 0.0;
-    this.scrub.heroTiltX = 0.245; // ~14 degrees on X
-    this.scrub.cupPosY = -0.06;
-    this.scrub.heroScale = 0.58; // Scaled up ~20% (0.50 -> 0.58)
-
     this.cupGroup.scale.set(0.58, 0.58, 0.58);
     this.cupGroup.position.set(0, -0.06, 0);
     this.cupGroup.rotation.set(0.245, 0, 0);
 
-    // Pacing: 0 to 25% separation with power3.out easing: 1 - (1 - p)^3
-    const p = Math.min(Math.max(progress, 0.0), 1.0);
-    const easedP = 1.0 - Math.pow(1.0 - p, 3.0);
+    // Separation: 0 to 22% with power3.out easing
+    const pSep = Math.min(Math.max(progress / 0.22, 0.0), 1.0);
+    const easedP = 1.0 - Math.pow(1.0 - pSep, 3.0);
 
     this.saucerMesh.position.y = -easedP * 1.38;
     if (this.contactShadowMesh) this.contactShadowMesh.position.y = -0.83 - easedP * 1.38;
-
     this.cupMesh.position.y = -easedP * 0.30;
 
+    const coffeeY = THREE.MathUtils.lerp(0.50, 0.82, easedP);
+    const foamY = THREE.MathUtils.lerp(0.52, 1.34, easedP);
+    const spoonY = THREE.MathUtils.lerp(0.55, 1.86, easedP);
+
     if (this.coffeeMesh) {
-      this.coffeeMesh.position.y = THREE.MathUtils.lerp(0.50, 0.82, easedP);
+      this.coffeeMesh.position.set(0, coffeeY, 0);
     }
-
     if (this.foamMesh) {
-      this.foamMesh.position.y = THREE.MathUtils.lerp(0.52, 1.34, easedP);
+      this.foamMesh.position.set(0, foamY, 0);
+    }
+    if (this.spoonMesh) {
+      this.spoonMesh.position.set(0, spoonY, 0);
     }
 
-    if (this.spoonMesh) {
-      this.spoonMesh.position.y = THREE.MathUtils.lerp(0.55, 1.86, easedP);
-      this.spoonMesh.position.x = 0;
+    // Pacing across focus steps:
+    // 0 to 0.22: Full stack separation (overview)
+    // 0.22 to 0.45: Step 1 (Crema) close-up
+    // 0.45 to 0.68: Step 2 (Coffee) close-up
+    // 0.68 to 0.90: Step 3 (Cup) close-up
+    // 0.90 to 1.0: Pull back to full stack for R2 dissolve
+
+    let targetCamY = 0.40;
+    let targetLookY = -0.10;
+    let targetCamZ = 6.1;
+    let targetFov = 36;
+
+    if (progress < 0.22) {
+      // Full stack overview
+      this.setLayerOpacities({ spoon: 1.0, crema: 1.0, coffee: 1.0, cup: 1.0, saucer: 1.0 });
+    } else if (progress < 0.45) {
+      // Step 1: Crema close-up (foam is at 1.34)
+      const t = Math.min(1.0, (progress - 0.22) / 0.08);
+      targetCamY = THREE.MathUtils.lerp(0.40, 1.35, t);
+      targetLookY = THREE.MathUtils.lerp(-0.10, 1.25, t);
+      targetCamZ = THREE.MathUtils.lerp(6.1, 4.8, t);
+      targetFov = THREE.MathUtils.lerp(36, 32, t);
+      const fadeOther = THREE.MathUtils.lerp(1.0, 0.20, t);
+      this.setLayerOpacities({ spoon: fadeOther, crema: 1.0, coffee: fadeOther, cup: fadeOther, saucer: fadeOther });
+    } else if (progress < 0.68) {
+      // Step 2: Coffee close-up (coffee is at 0.82)
+      const t = Math.min(1.0, (progress - 0.45) / 0.08);
+      targetCamY = THREE.MathUtils.lerp(1.35, 0.85, t);
+      targetLookY = THREE.MathUtils.lerp(1.25, 0.75, t);
+      targetCamZ = 4.8;
+      targetFov = 32;
+      const fadeCrema = THREE.MathUtils.lerp(1.0, 0.20, t);
+      this.setLayerOpacities({ spoon: 0.20, crema: fadeCrema, coffee: 1.0, cup: 0.20, saucer: 0.20 });
+    } else if (progress < 0.90) {
+      // Step 3: Cup close-up (cup is at -0.30)
+      const t = Math.min(1.0, (progress - 0.68) / 0.08);
+      targetCamY = THREE.MathUtils.lerp(0.85, -0.20, t);
+      targetLookY = THREE.MathUtils.lerp(0.75, -0.30, t);
+      targetCamZ = 4.8;
+      targetFov = 32;
+      const fadeCoffee = THREE.MathUtils.lerp(1.0, 0.20, t);
+      this.setLayerOpacities({ spoon: 0.20, crema: 0.20, coffee: fadeCoffee, cup: 1.0, saucer: 0.20 });
+    } else {
+      // 0.90 to 1.0: Pull back to full stack for R2 handover
+      const t = Math.min(1.0, (progress - 0.90) / 0.10);
+      targetCamY = THREE.MathUtils.lerp(-0.20, 0.40, t);
+      targetLookY = THREE.MathUtils.lerp(-0.30, -0.10, t);
+      targetCamZ = THREE.MathUtils.lerp(4.8, 6.1, t);
+      targetFov = THREE.MathUtils.lerp(32, 36, t);
+      const restoreOther = THREE.MathUtils.lerp(0.20, 1.0, t);
+      this.setLayerOpacities({ spoon: restoreOther, crema: restoreOther, coffee: restoreOther, cup: 1.0, saucer: restoreOther });
     }
+
+    this.scrub.cameraY = targetCamY;
+    this.scrub.cameraLookY = targetLookY;
+    this.scrub.cameraZ = targetCamZ;
+    this.camera.fov = targetFov;
+    this.camera.updateProjectionMatrix();
 
     // Reduce visible beans in this section to ~25% (100 beans), slightly dimmer, kept out of label, tag and leader-line zones
     if (!this._reusableDummy) {
@@ -1869,6 +1974,45 @@ export class EmberScene {
     } else if (!inExploded) {
       this._beansInExploded = false;
     }
+  }
+
+  // 3D projected screen coordinates for the focus marker on layer surfaces
+  getExplodedFocusCoords(step) {
+    if (!this.cupGroup || !this.camera) return null;
+
+    this.cupGroup.updateMatrixWorld(true);
+    this.camera.updateMatrixWorld(true);
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    if (!this._projVec) this._projVec = new THREE.Vector3();
+    const pv = this._projVec;
+    const m = this.cupGroup.matrixWorld;
+    const cam = this.camera;
+
+    const projectToScreen = (x, y, z) => {
+      pv.set(x, y, z).applyMatrix4(m).project(cam);
+      return {
+        x: (pv.x * 0.5 + 0.5) * width,
+        y: (-pv.y * 0.5 + 0.5) * height
+      };
+    };
+
+    if (step === 1) {
+      // Step 1: Crema disc surface (foamMesh is at position.y)
+      const foamY = this.foamMesh ? this.foamMesh.position.y : 1.34;
+      return projectToScreen(-0.35, foamY + 0.02, 0.15);
+    } else if (step === 2) {
+      // Step 2: Coffee disc surface (coffeeMesh is at position.y)
+      const coffeeY = this.coffeeMesh ? this.coffeeMesh.position.y : 0.82;
+      return projectToScreen(0.35, coffeeY + 0.02, 0.15);
+    } else if (step === 3) {
+      // Step 3: Cup wall surface (cupMesh is at position.y)
+      const cupY = this.cupMesh ? this.cupMesh.position.y : -0.30;
+      return projectToScreen(-0.45, cupY + 0.35, 0.65);
+    }
+    return null;
   }
 
   // Real-time 3D projected screen coordinates (pixels) for all 5 layers (zero heap allocation)
@@ -2547,15 +2691,15 @@ export class EmberScene {
 
         if (this.scrub.sectionMode === 'exploded' && this.scrub.explodedProgress > 0.005) {
           // Exploded view: camera slowly orbits +-8 degrees, layers slowly turn
-          const orbitAngle = Math.sin(elapsedTime * 0.45) * 0.14; // +-8 deg
+          const orbitAngle = Math.sin(elapsedTime * 0.45) * 0.08; // subtle orbit
           this.cupGroup.rotation.set(this.scrub.heroTiltX, 0, this.scrub.heroTiltZ);
           this.cupGroup.position.set(0, this.scrub.cupPosY, 0);
-          this.camera.position.set(Math.sin(orbitAngle) * 6.1, this.scrub.cameraY, Math.cos(orbitAngle) * 6.1);
+          this.camera.position.set(Math.sin(orbitAngle) * this.scrub.cameraZ, this.scrub.cameraY, Math.cos(orbitAngle) * this.scrub.cameraZ);
           this.camera.lookAt(0, this.scrub.cameraLookY, 0);
 
           if (this.spoonMesh) this.spoonMesh.rotation.y = elapsedTime * 0.18;
-          if (this.foamMesh) this.foamMesh.rotation.y = elapsedTime * -0.14;
-          if (this.coffeeMesh) this.coffeeMesh.rotation.y = elapsedTime * 0.16;
+          if (this.foamMesh) this.foamMesh.rotation.z = elapsedTime * -0.14;
+          if (this.coffeeMesh) this.coffeeMesh.rotation.z = elapsedTime * 0.16;
           if (this.cupMesh) this.cupMesh.rotation.y = elapsedTime * -0.09;
           if (this.saucerMesh) this.saucerMesh.rotation.y = elapsedTime * 0.07;
         } else if (this.scrub.sectionMode === 'hero' || this.scrub.sectionMode === 'dive') {
@@ -2921,6 +3065,8 @@ export class EmberScene {
       scene: this.scene,
       renderer: this.renderer,
       getExplodedLayerScreenCoords: this.getExplodedLayerScreenCoords.bind(this),
+      getExplodedFocusCoords: this.getExplodedFocusCoords.bind(this),
+      setLayerOpacities: this.setLayerOpacities.bind(this),
       setLiquidColor: this.setLiquidColor.bind(this),
       setHeroScrub: this.setHeroScrub.bind(this),
       setDiveScrub: this.setDiveScrub.bind(this),
@@ -2932,6 +3078,7 @@ export class EmberScene {
       setAtmosphereScrub: this.setAtmosphereScrub.bind(this),
       setFinaleScrub: this.setFinaleScrub.bind(this),
       burstFinaleSplash: this.burstFinaleSplash.bind(this),
+      rawScene: this,
       renderState: {
         clock: this.clock,
         mouse: this.mouse,

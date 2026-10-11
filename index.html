@@ -167,57 +167,49 @@
     <!-- Section 3: Exploded View -->
     <section class="section-exploded scroll-section" id="exploded">
       <div class="exploded-content-pin">
-        <!-- SVG Leader Lines, Layer Tags & Dots -->
-        <svg class="exploded-svg-layer" aria-hidden="true">
-          <!-- Story Leader Line 1: Origin (Left to crema disc) + 6px ember dot -->
-          <path id="line-origin" class="exploded-leader-line line-origin" d="M 450 260 L 840 285" />
-          <circle id="dot-origin" class="exploded-leader-dot dot-origin" cx="840" cy="285" r="3" />
-
-          <!-- Story Leader Line 2: Roast (Right to coffee disc) + 6px ember dot -->
-          <path id="line-roast" class="exploded-leader-line line-roast" d="M 1470 540 L 1180 575" />
-          <circle id="dot-roast" class="exploded-leader-dot dot-roast" cx="1180" cy="575" r="3" />
-
-          <!-- Story Leader Line 3: Notes (Left to cup body) + 6px ember dot -->
-          <path id="line-notes" class="exploded-leader-line line-notes" d="M 450 740 L 840 710" />
-          <circle id="dot-notes" class="exploded-leader-dot dot-notes" cx="840" cy="710" r="3" />
-
-          <!-- Layer Tag 1: SPOON (Right side: 20px tick line + 4px dot) -->
-          <line id="tick-spoon" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
-          <circle id="dot-spoon" class="tag-dot" cx="0" cy="0" r="2" />
-          <text id="tag-spoon" class="exploded-tag-text" x="0" y="0">SPOON</text>
-
-          <!-- Layer Tag 2: CREMA (Right side: 20px tick line + 4px dot) -->
-          <line id="tick-crema" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
-          <circle id="dot-crema" class="tag-dot" cx="0" cy="0" r="2" />
-          <text id="tag-crema" class="exploded-tag-text" x="0" y="0">CREMA</text>
-
-          <!-- Layer Tag 3: COFFEE (Left side: 20px tick line + 4px dot) -->
-          <line id="tick-coffee" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
-          <circle id="dot-coffee" class="tag-dot" cx="0" cy="0" r="2" />
-          <text id="tag-coffee" class="exploded-tag-text" x="0" y="0">COFFEE</text>
-
-          <!-- Layer Tag 4: CUP (Right side: 20px tick line + 4px dot) -->
-          <line id="tick-cup" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
-          <circle id="dot-cup" class="tag-dot" cx="0" cy="0" r="2" />
-          <text id="tag-cup" class="exploded-tag-text" x="0" y="0">CUP</text>
-
-          <!-- Layer Tag 5: SAUCER (Right side: 20px tick line + 4px dot) -->
-          <line id="tick-saucer" class="tag-tick" x1="0" y1="0" x2="0" y2="0" />
-          <circle id="dot-saucer" class="tag-dot" cx="0" cy="0" r="2" />
-          <text id="tag-saucer" class="exploded-tag-text" x="0" y="0">SAUCER</text>
+        <!-- Focus Step SVG: Pulsing Ring Marker ON Layer Surface + Elbow Leader Line -->
+        <svg class="exploded-focus-svg" id="exploded-focus-svg" aria-hidden="true">
+          <!-- Marker on layer surface: pulsing ring with center dot -->
+          <g id="focus-marker-group" class="focus-marker-group" opacity="0">
+            <circle id="focus-marker-pulse" class="focus-marker-pulse" cx="0" cy="0" r="12" />
+            <circle id="focus-marker-ring" class="focus-marker-ring" cx="0" cy="0" r="5" />
+            <circle id="focus-marker-dot" class="focus-marker-dot" cx="0" cy="0" r="2.5" />
+          </g>
+          <!-- Elbow Leader Line: short diagonal from marker, then horizontal to text block -->
+          <path id="focus-elbow-line" class="focus-elbow-line" d="M 0 0" opacity="0" />
         </svg>
 
-        <!-- Labels (Verbatim from content.md) -->
-        <div class="exploded-label" id="label-origin">
-          <span class="exploded-label-index">01 ORIGIN</span> — Single-estate beans, picked ripe, washed slow.
-        </div>
+        <!-- Focus Step Cards (01 ORIGIN, 02 ROAST, 03 NOTES) -->
+        <div class="exploded-focus-container" id="exploded-focus-container">
+          <!-- Focus Step 1: 01 ORIGIN (Crema) -->
+          <div class="focus-step-card" id="focus-step-1" data-step="1">
+            <span class="focus-bg-num" aria-hidden="true">01</span>
+            <div class="focus-content-wrap">
+              <div class="focus-mono-layer">CREMA</div>
+              <h3 class="focus-step-title">01 ORIGIN</h3>
+              <p class="focus-step-copy">Single-estate beans, picked ripe, washed slow.</p>
+            </div>
+          </div>
 
-        <div class="exploded-label" id="label-roast">
-          <span class="exploded-label-index">02 ROAST</span> — Medium-dark, rested seven days, never rushed.
-        </div>
+          <!-- Focus Step 2: 02 ROAST (Coffee) -->
+          <div class="focus-step-card" id="focus-step-2" data-step="2">
+            <span class="focus-bg-num" aria-hidden="true">02</span>
+            <div class="focus-content-wrap">
+              <div class="focus-mono-layer">COFFEE</div>
+              <h3 class="focus-step-title">02 ROAST</h3>
+              <p class="focus-step-copy">Medium-dark, rested seven days, never rushed.</p>
+            </div>
+          </div>
 
-        <div class="exploded-label" id="label-notes">
-          <span class="exploded-label-index">03 NOTES</span> — Dark cocoa, burnt caramel, orange peel.
+          <!-- Focus Step 3: 03 NOTES (Cup) -->
+          <div class="focus-step-card" id="focus-step-3" data-step="3">
+            <span class="focus-bg-num" aria-hidden="true">03</span>
+            <div class="focus-content-wrap">
+              <div class="focus-mono-layer">CUP</div>
+              <h3 class="focus-step-title">03 NOTES</h3>
+              <p class="focus-step-copy">Dark cocoa, burnt caramel, orange peel.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
