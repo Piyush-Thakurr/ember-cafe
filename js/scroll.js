@@ -153,6 +153,47 @@ export class EmberScroll {
     // ----------------------------------------------------
     // 3. Exploded View (Cup separates along Y, dynamic 3D projected SVG leader lines & layer tags)
     // ----------------------------------------------------
+    let cachedOrigin = null;
+    let cachedRoast = null;
+    let cachedNotes = null;
+    let lineO = null, dotO = null;
+    let lineR = null, dotR = null;
+    let lineN = null, dotN = null;
+    let tagEls = null;
+
+    const updateRects = () => {
+      const originEl = document.getElementById('label-origin');
+      const roastEl = document.getElementById('label-roast');
+      const notesEl = document.getElementById('label-notes');
+      if (originEl) {
+        const r = originEl.getBoundingClientRect();
+        cachedOrigin = { x: r.right + 12, y: r.top + r.height / 2 };
+      }
+      if (roastEl) {
+        const r = roastEl.getBoundingClientRect();
+        cachedRoast = { x: r.left - 12, y: r.top + r.height / 2 };
+      }
+      if (notesEl) {
+        const r = notesEl.getBoundingClientRect();
+        cachedNotes = { x: r.right + 12, y: r.top + r.height / 2 };
+      }
+      if (!lineO) {
+        lineO = document.getElementById('line-origin');
+        dotO = document.getElementById('dot-origin');
+        lineR = document.getElementById('line-roast');
+        dotR = document.getElementById('dot-roast');
+        lineN = document.getElementById('line-notes');
+        dotN = document.getElementById('dot-notes');
+        tagEls = {
+          spoon: { tick: document.getElementById('tick-spoon'), dot: document.getElementById('dot-spoon'), text: document.getElementById('tag-spoon') },
+          crema: { tick: document.getElementById('tick-crema'), dot: document.getElementById('dot-crema'), text: document.getElementById('tag-crema') },
+          coffee: { tick: document.getElementById('tick-coffee'), dot: document.getElementById('dot-coffee'), text: document.getElementById('tag-coffee') },
+          cup: { tick: document.getElementById('tick-cup'), dot: document.getElementById('dot-cup'), text: document.getElementById('tag-cup') },
+          saucer: { tick: document.getElementById('tick-saucer'), dot: document.getElementById('dot-saucer'), text: document.getElementById('tag-saucer') }
+        };
+      }
+    };
+
     const explodedTl = gsap.timeline({
       scrollTrigger: {
         trigger: '#exploded',
@@ -164,120 +205,91 @@ export class EmberScroll {
         onEnter: () => {
           gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setExplodedScrub?.(0);
+          updateRects();
         },
-        onEnterBack: () => window.emberStage?.setExplodedScrub?.(1),
+        onEnterBack: () => {
+          window.emberStage?.setExplodedScrub?.(1);
+          updateRects();
+        },
         onUpdate: (self) => {
           if (!self.isActive) return;
           const p = self.progress;
-          // Phase 2: 0 to 25% separation (power3.out internally handled in setExplodedScrub)
           const separationProgress = Math.min(p / 0.25, 1.0);
           window.emberStage?.setExplodedScrub?.(separationProgress);
 
-          // Real-time dynamic projection from 3D layer meshes to screen pixel coordinates
+          if (!cachedOrigin) updateRects();
+
           const coords = window.emberStage?.getExplodedLayerScreenCoords?.();
           if (coords) {
-            // 1. ORIGIN leader line (Left -> Crema disc left edge): draws across 25% to 45%
-            const originEl = document.getElementById('label-origin');
-            if (originEl) {
-              const r = originEl.getBoundingClientRect();
-              const x1 = r.right + 12;
-              const y1 = r.top + r.height / 2;
+            if (cachedOrigin && cachedRoast && cachedNotes) {
+              // 1. ORIGIN leader line (Left -> Crema disc left edge)
+              const x1 = cachedOrigin.x;
+              const y1 = cachedOrigin.y;
               const x2 = coords.cremaLeft.x;
               const y2 = coords.cremaLeft.y;
-              const line = document.getElementById('line-origin');
-              const dot = document.getElementById('dot-origin');
-              if (line) {
-                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+              if (lineO) {
+                lineO.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
                 const len = Math.hypot(x2 - x1, y2 - y1);
-                line.style.strokeDasharray = `${len}`;
-                if (p < 0.25) {
-                  line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.45) {
-                  line.style.strokeDashoffset = '0';
-                } else {
-                  const frac = (p - 0.25) / 0.20;
-                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
-                }
+                lineO.style.strokeDasharray = `${len}`;
+                if (p < 0.25) lineO.style.strokeDashoffset = `${len}`;
+                else if (p >= 0.45) lineO.style.strokeDashoffset = '0';
+                else lineO.style.strokeDashoffset = `${len * (1 - (p - 0.25) / 0.20)}`;
               }
-              if (dot) {
-                dot.setAttribute('cx', x2);
-                dot.setAttribute('cy', y2);
+              if (dotO) {
+                dotO.setAttribute('cx', x2);
+                dotO.setAttribute('cy', y2);
               }
-            }
 
-            // 2. ROAST leader line (Right -> Coffee disc right edge): draws across 45% to 65%
-            const roastEl = document.getElementById('label-roast');
-            if (roastEl) {
-              const r = roastEl.getBoundingClientRect();
-              const x1 = r.left - 12;
-              const y1 = r.top + r.height / 2;
-              const x2 = coords.coffeeRight.x;
-              const y2 = coords.coffeeRight.y;
-              const line = document.getElementById('line-roast');
-              const dot = document.getElementById('dot-roast');
-              if (line) {
-                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
-                const len = Math.hypot(x2 - x1, y2 - y1);
-                line.style.strokeDasharray = `${len}`;
-                if (p < 0.45) {
-                  line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.65) {
-                  line.style.strokeDashoffset = '0';
-                } else {
-                  const frac = (p - 0.45) / 0.20;
-                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
-                }
+              // 2. ROAST leader line (Right -> Coffee disc right edge)
+              const rx1 = cachedRoast.x;
+              const ry1 = cachedRoast.y;
+              const rx2 = coords.coffeeRight.x;
+              const ry2 = coords.coffeeRight.y;
+              if (lineR) {
+                lineR.setAttribute('d', `M ${rx1} ${ry1} L ${rx2} ${ry2}`);
+                const rlen = Math.hypot(rx2 - rx1, ry2 - ry1);
+                lineR.style.strokeDasharray = `${rlen}`;
+                if (p < 0.45) lineR.style.strokeDashoffset = `${rlen}`;
+                else if (p >= 0.65) lineR.style.strokeDashoffset = '0';
+                else lineR.style.strokeDashoffset = `${rlen * (1 - (p - 0.45) / 0.20)}`;
               }
-              if (dot) {
-                dot.setAttribute('cx', x2);
-                dot.setAttribute('cy', y2);
+              if (dotR) {
+                dotR.setAttribute('cx', rx2);
+                dotR.setAttribute('cy', ry2);
               }
-            }
 
-            // 3. NOTES leader line (Left -> Cup body left edge): draws across 65% to 85%
-            const notesEl = document.getElementById('label-notes');
-            if (notesEl) {
-              const r = notesEl.getBoundingClientRect();
-              const x1 = r.right + 12;
-              const y1 = r.top + r.height / 2;
-              const x2 = coords.cupLeft.x;
-              const y2 = coords.cupLeft.y;
-              const line = document.getElementById('line-notes');
-              const dot = document.getElementById('dot-notes');
-              if (line) {
-                line.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
-                const len = Math.hypot(x2 - x1, y2 - y1);
-                line.style.strokeDasharray = `${len}`;
-                if (p < 0.65) {
-                  line.style.strokeDashoffset = `${len}`;
-                } else if (p >= 0.85) {
-                  line.style.strokeDashoffset = '0';
-                } else {
-                  const frac = (p - 0.65) / 0.20;
-                  line.style.strokeDashoffset = `${len * (1 - frac)}`;
-                }
+              // 3. NOTES leader line (Left -> Cup body left edge)
+              const nx1 = cachedNotes.x;
+              const ny1 = cachedNotes.y;
+              const nx2 = coords.cupLeft.x;
+              const ny2 = coords.cupLeft.y;
+              if (lineN) {
+                lineN.setAttribute('d', `M ${nx1} ${ny1} L ${nx2} ${ny2}`);
+                const nlen = Math.hypot(nx2 - nx1, ny2 - ny1);
+                lineN.style.strokeDasharray = `${nlen}`;
+                if (p < 0.65) lineN.style.strokeDashoffset = `${nlen}`;
+                else if (p >= 0.85) lineN.style.strokeDashoffset = '0';
+                else lineN.style.strokeDashoffset = `${nlen * (1 - (p - 0.65) / 0.20)}`;
               }
-              if (dot) {
-                dot.setAttribute('cx', x2);
-                dot.setAttribute('cy', y2);
+              if (dotN) {
+                dotN.setAttribute('cx', nx2);
+                dotN.setAttribute('cy', ny2);
               }
             }
 
             // Update 5 Layer Name Tags: 20px tick line + 4px dot on layer edge
             const setLayerTag = (id, x, y, dir) => {
-              const tick = document.getElementById(`tick-${id}`);
-              const dot = document.getElementById(`dot-${id}`);
-              const text = document.getElementById(`tag-${id}`);
-              if (tick && dot && text) {
-                dot.setAttribute('cx', x);
-                dot.setAttribute('cy', y);
-                tick.setAttribute('x1', x);
-                tick.setAttribute('y1', y);
-                tick.setAttribute('x2', x + dir * 20);
-                tick.setAttribute('y2', y);
-                text.setAttribute('x', x + dir * 28);
-                text.setAttribute('y', y);
-                text.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
+              const el = tagEls?.[id];
+              if (el && el.tick && el.dot && el.text) {
+                el.dot.setAttribute('cx', x);
+                el.dot.setAttribute('cy', y);
+                el.tick.setAttribute('x1', x);
+                el.tick.setAttribute('y1', y);
+                el.tick.setAttribute('x2', x + dir * 20);
+                el.tick.setAttribute('y2', y);
+                el.text.setAttribute('x', x + dir * 28);
+                el.text.setAttribute('y', y);
+                el.text.setAttribute('text-anchor', dir > 0 ? 'start' : 'end');
               }
             };
 

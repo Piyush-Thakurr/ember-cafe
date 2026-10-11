@@ -21,11 +21,14 @@ export class EmberPreloader {
   }
 
   init() {
-    if (this.isReduced) {
+    const hasVisited = sessionStorage.getItem('ember_visited');
+    if (this.isReduced || hasVisited) {
       if (this.preloaderEl) this.preloaderEl.style.display = 'none';
       if (this.onComplete) this.onComplete();
       return;
     }
+
+    sessionStorage.setItem('ember_visited', 'true');
 
     const state = { count: 0 };
     const tl = gsap.timeline({

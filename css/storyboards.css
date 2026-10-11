@@ -49,6 +49,7 @@
 .ember-char {
   display: inline-block;
   will-change: transform, opacity;
+  transform: translateZ(0);
   transform-origin: center center;
 }
 
@@ -115,7 +116,8 @@
   opacity: 0;
   pointer-events: none;
   z-index: 6; /* In front of 3D canvas (z-index: 5), behind text (z-index: 10) */
-  will-change: opacity;
+  will-change: opacity, transform;
+  transform: translateZ(0);
 }
 
 /* Section: Exploded View (State 3 Prep) */

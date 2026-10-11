@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EMBER — Atelier of slow coffee</title>
-  
-  <!-- Typography from DESIGN.md (Bodoni Moda, EB Garamond, Space Mono) + Fallback Display Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-  
-  <link rel="icon" href="data:,">
+  <meta name="description" content="EMBER — Atelier of slow coffee. Roasted slow. Poured loud. Single-estate beans, medium-dark roast, poured loud in Uttai, Bhillai.">
+  <meta name="theme-color" content="#14100D">
+  <meta property="og:title" content="EMBER — Atelier of slow coffee">
+  <meta property="og:description" content="Roasted slow. Poured loud. Single-estate beans, medium-dark roast, poured loud in Uttai, Bhillai.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://embercafe.com">
+  <meta property="og:image" content="./assets/menu/drink-01-ember-espresso.jpg">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2314100D'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23E0541F'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./css/tokens.css?v=8">
   <link rel="stylesheet" href="./css/base.css?v=8">
   <link rel="stylesheet" href="./css/storyboards.css?v=8">
@@ -29,6 +30,26 @@
   </script>
 </head>
 <body>
+  <!-- Accessibility Skip Link -->
+  <a href="#main" class="skip-to-content">Skip to main content</a>
+
+  <!-- Film Grain Overlay (Phase 7) -->
+  <div class="film-grain-overlay" aria-hidden="true"></div>
+
+  <!-- Custom Interactive Cursor (Phase 7: Dot + Ring + Dynamic Labels) -->
+  <div class="custom-cursor-wrap" id="custom-cursor" aria-hidden="true">
+    <div class="cursor-dot"></div>
+    <div class="cursor-ring">
+      <span class="cursor-label" id="cursor-label"></span>
+    </div>
+  </div>
+
+  <!-- Scroll Progress Line & Section Counter (Phase 7) -->
+  <div class="scroll-progress-line" id="scroll-progress-line" aria-hidden="true"></div>
+  <div class="scroll-section-counter" id="scroll-section-counter" aria-hidden="true">
+    <span class="counter-val" id="counter-val">[ 01 / 08 ]</span>
+  </div>
+
   <!-- Preloader: "Brewing…" 0->100 with filling cup silhouette -->
   <aside id="preloader" aria-label="Loading Experience">
     <svg class="preloader-cup-svg" viewBox="0 0 64 56" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,11 +108,31 @@
     
     <div class="nav-actions">
       <a href="#reserve" class="btn-pill">Reserve</a>
+      <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
     </div>
   </header>
 
+  <!-- Full-screen Espresso Mobile Navigation Overlay -->
+  <div class="mobile-nav-overlay" id="mobile-nav-overlay" aria-hidden="true">
+    <div class="mobile-nav-inner">
+      <nav class="mobile-nav-links" aria-label="Mobile Navigation">
+        <a href="#menu" class="mobile-nav-link">Menu</a>
+        <a href="#process" class="mobile-nav-link">Process</a>
+        <a href="#finale" class="mobile-nav-link">Visit</a>
+        <a href="#reserve" class="mobile-nav-link btn-open-modal">Reserve</a>
+      </nav>
+      <div class="mobile-nav-footer">
+        <p class="mobile-nav-tagline">Roasted slow. Poured loud.</p>
+        <p class="mobile-nav-loc">Uttai, Bhillai</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Experience -->
-  <main>
+  <main id="main">
     <!-- Section 1: Hero & Scrolled State -->
     <section class="hero-section scroll-section" id="hero">
       <div class="hero-top-bar"></div>

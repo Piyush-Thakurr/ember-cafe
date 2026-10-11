@@ -1543,7 +1543,7 @@ export class EmberScene {
     const maxDpr = width >= 1440 ? 1.5 : 2.0;
     const dpr = Math.min(window.devicePixelRatio, maxDpr);
 
-    this.blurTarget = new THREE.WebGLRenderTarget(Math.floor(width * dpr), Math.floor(height * dpr), {
+    this.blurTarget = new THREE.WebGLRenderTarget(Math.floor(width * 0.5), Math.floor(height * 0.5), {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       format: THREE.RGBAFormat
@@ -1620,8 +1620,7 @@ export class EmberScene {
     }
 
     if (this.blurTarget) {
-      const dpr = Math.min(window.devicePixelRatio, maxDpr);
-      this.blurTarget.setSize(Math.floor(width * dpr), Math.floor(height * dpr));
+      this.blurTarget.setSize(Math.floor(width * 0.5), Math.floor(height * 0.5));
     }
   }
 
@@ -1832,7 +1831,8 @@ export class EmberScene {
     const zeroDummy = this._zeroDummy;
     const count = this.beanInitialData.length;
 
-    if (inExploded && this.beanMesh) {
+    if (inExploded && this.beanMesh && !this._beansInExploded) {
+      this._beansInExploded = true;
       for (let i = 0; i < count; i++) {
         if (i >= 100) {
           // 75% of beans hidden
@@ -1866,10 +1866,12 @@ export class EmberScene {
       }
       this.beanMesh.instanceMatrix.needsUpdate = true;
       if (this.beanMeshFg) this.beanMeshFg.instanceMatrix.needsUpdate = true;
+    } else if (!inExploded) {
+      this._beansInExploded = false;
     }
   }
 
-  // Real-time 3D projected screen coordinates (pixels) for all 5 layers
+  // Real-time 3D projected screen coordinates (pixels) for all 5 layers (zero heap allocation)
   getExplodedLayerScreenCoords() {
     if (!this.cupGroup || !this.camera) return null;
 
@@ -1879,39 +1881,41 @@ export class EmberScene {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const projectToScreen = (localVec) => {
-      const v = localVec.clone();
-      v.applyMatrix4(this.cupGroup.matrixWorld);
-      v.project(this.camera);
+    if (!this._projVec) this._projVec = new THREE.Vector3();
+    const pv = this._projVec;
+    const m = this.cupGroup.matrixWorld;
+    const cam = this.camera;
+
+    const projectToScreen = (x, y, z) => {
+      pv.set(x, y, z).applyMatrix4(m).project(cam);
       return {
-        x: (v.x * 0.5 + 0.5) * width,
-        y: (-v.y * 0.5 + 0.5) * height
+        x: (pv.x * 0.5 + 0.5) * width,
+        y: (-pv.y * 0.5 + 0.5) * height
       };
     };
 
     // 1. Spoon: right tip at local (0.75, spoonPosY, 0)
     const spoonY = this.spoonMesh ? this.spoonMesh.position.y : 1.86;
-    const spoonRight = projectToScreen(new THREE.Vector3(0.75, spoonY, 0));
+    const spoonRight = projectToScreen(0.75, spoonY, 0);
 
     // 2. Crema Disc: left edge and right edge (radius 1.06)
     const cremaY = this.foamMesh ? this.foamMesh.position.y : 1.34;
-    const cremaLeft = projectToScreen(new THREE.Vector3(-1.06, cremaY, 0));
-    const cremaRight = projectToScreen(new THREE.Vector3(1.06, cremaY, 0));
+    const cremaLeft = projectToScreen(-1.06, cremaY, 0);
+    const cremaRight = projectToScreen(1.06, cremaY, 0);
 
     // 3. Coffee Disc: left edge and right edge (radius 1.06)
     const coffeeY = this.coffeeMesh ? this.coffeeMesh.position.y : 0.82;
-    const coffeeLeft = projectToScreen(new THREE.Vector3(-1.06, coffeeY, 0));
-    const coffeeRight = projectToScreen(new THREE.Vector3(1.06, coffeeY, 0));
+    const coffeeLeft = projectToScreen(-1.06, coffeeY, 0);
+    const coffeeRight = projectToScreen(1.06, coffeeY, 0);
 
     // 4. Cup Body:
-    // 03 NOTES: place the dot exactly on the cup's outer body surface (project a point on the cup's left outer wall)
     const cupY = this.cupMesh ? this.cupMesh.position.y : -0.30;
-    const cupLeft = projectToScreen(new THREE.Vector3(-0.96, cupY + 0.16, 0.28));
-    const cupRight = projectToScreen(new THREE.Vector3(1.02, cupY + 0.10, 0));
+    const cupLeft = projectToScreen(-0.96, cupY + 0.16, 0.28);
+    const cupRight = projectToScreen(1.02, cupY + 0.10, 0);
 
     // 5. Saucer: right edge (radius 2.20)
     const saucerY = this.saucerMesh ? this.saucerMesh.position.y : -1.38;
-    const saucerRight = projectToScreen(new THREE.Vector3(2.20, saucerY - 0.54, 0));
+    const saucerRight = projectToScreen(2.20, saucerY - 0.54, 0);
 
     return {
       spoonRight,
@@ -2880,7 +2884,7 @@ export class EmberScene {
     if (Math.abs(this.scrub.scrollVelocity) < 0.001) this.scrub.scrollVelocity = 0;
 
     if (this.scrub.sectionMode !== 'atmosphere') {
-      if (blurStrength > 0.002 && this.blurTarget && this.blurScene && this.blurCamera) {
+      if (false && blurStrength > 0.002 && this.blurTarget && this.blurScene && this.blurCamera) {
         this.renderer.setRenderTarget(this.blurTarget);
         this.renderer.render(this.scene, this.camera);
         this.renderer.setRenderTarget(null);

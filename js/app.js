@@ -4,6 +4,7 @@ import Lenis from 'lenis';
 import { EmberScene } from './scene.js';
 import { EmberScroll } from './scroll.js';
 import { EmberPreloader } from './preloader.js';
+import { EmberPolish } from './polish.js';
 
 /**
  * EMBER Application Orchestrator (Stage 2A)
@@ -49,7 +50,11 @@ class EmberApp {
     this.initReservationModal();
     this.initFooter();
 
-    console.log('[EMBER] Stage 2B Initialized: Menu, Process, Atmosphere, Finale & Modal active.');
+    // 6. Initialize Polish & Micro-interactions (Phase 7)
+    this.polish = new EmberPolish(this.lenis);
+    window.emberPolish = this.polish;
+
+    console.log('[EMBER] Stage 2B & Phase 7 Initialized.');
   }
 
   initFooter() {
