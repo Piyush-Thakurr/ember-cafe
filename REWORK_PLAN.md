@@ -1,0 +1,60 @@
+REWORK PLAN. The previous build has serious bugs. Do NOT trust your earlier "done" reports. Work in the stages R0 to R6 below, ONE STAGE AT A TIME. After each stage: run the GATE, commit (git commit -am "R<n>: <name>"), post the report, then STOP and WAIT for me to say "continue". Never start the next stage by yourself.
+
+PROGRESS REPORT: at the end of every stage and at every commit print exactly:
+PROGRESS: <n>% complete | <m>% remaining | just finished: <stage> | next: <stage> | open issues: <list>
+Weights: R0 10, R1 20, R2 10, R3 25, R4 15, R5 12, R6 8.
+
+THE GATE (mandatory for every stage; my approval depends on it)
+1. Dev-only audit (js/audit.js, enabled with ?audit=1): list every ScrollTrigger with start/end in vh; FAIL on any two pinned ranges that overlap, any gap above 15vh with nothing animating, and any trigger without invalidateOnRefresh.
+2. Scroll the whole page in 50px steps at 1920x1080 and 1366x768 and screenshot every step within +-150vh of the stage's start and end. FAIL any frame that is black or blank (average brightness below #0C0907), shows TEXT from two sections at once, or has any element cut off or clipped.
+3. FPS 55+ in every section. If you cannot reach it, apply the stage's fallback and tell me.
+4. Report a boundary table: each section boundary | what hands over (object) | length in vh | PASS/FAIL, and attach the screenshots for the stage's checkpoints. Fix every FAIL before reporting.
+Transitions must be smooth: no hard cuts, no fades through black, no overlap between sections. The only thing that crosses a section boundary is the 3D vessel (cup, then bean, then drop, then cup), never text or backgrounds.
+
+GLOBAL RULES (unchanged): all text from content.md; colours and fonts from DESIGN.md; large Bodoni Moda with optical size off, weight 800 and a thin same-colour text stroke; one 3D vessel continuity; never pure black (darkest #14100D); keep the hero, State 1 spread and the reservation modal behaviour. Scroll budget: hero+dive 180vh, exploded 160vh, bean rain 170vh, menu about 70vh per remaining drink + 40vh, process 220vh, atmosphere 220vh, finale 160vh, footer 70vh.
+
+R0: STRUCTURE FIXES (no new features)
+a) ScrollTrigger architecture: one function per section that returns its timeline; create them in DOM order inside one buildScroll(); no two pins ever overlap; pinSpacing true; ScrollTrigger.sort(); invalidateOnRefresh true; call ScrollTrigger.refresh() after document.fonts.ready, images loaded and the canvas init. Transitions happen INSIDE a section's own timeline, never by overlapping two sections. The menu section currently pins while the bean rain is still on screen: fix this root cause, and verify with the audit.
+b) Section registry [{id, theme: dark|light, number}]. Nav and counter colours switch by theme via ScrollTrigger (dark sections: crema text, light sections: espresso text). Remove mix-blend-mode. Floating transparent nav with a soft 120px gradient scrim at the top on dark sections only (no bar, no border, no box). Wordmark and links must stay legible (contrast 4.5:1+) over EVERY section and over the photos. Only the Reserve pill is filled.
+c) The counter "[ 0N / 08 ]" must update to the current section, use the theme colour, and be hidden in the gallery section (it overlaps photos).
+d) Cursor: show a label only on elements with data-cursor (Drag only on draggable things, View only on gallery images, Reserve only on pills). No label over the bean rain or text.
+e) Find and remove the grey disc/saucer-like mesh that appears in the Process section.
+f) Remove the crema wipe after Process. The gallery after it is dark. The crema wipe belongs only at the gallery -> finale boundary.
+g) Process section: background stays espresso for the whole section; all four steps stay readable (active ember, others crema at 35%).
+
+R1: HERO -> DIVE -> EXPLODED VIEW (3D transition + new label system)
+Today there is no visible dive: the crema and coffee discs stand on edge inside the cup and the headline never shows. Fix these by checkpoint (scroll % of the hero+dive+exploded range):
+- 0%: hero. 15%: EMBER letters fly outward past the camera (scale up to 3.5x, fading) and the cup tilts forward about 65 degrees. 30%: the camera dollies in until the crema fills the screen. 40 to 55%: ripple rings expand across the crema, and "Look closer. The crema is a map." is clearly visible above the canvas on two lines (z-index above the canvas, 35vh hold, slow parallax drift). 65%: the camera pulls back to the 3/4 overhead angle, the crema detaches as a disc and the layers separate. 75 to 100%: exploded view.
+- The crema disc and the coffee disc must always be HORIZONTAL and centred on one vertical axis (fix the rotation order if they stand on edge). The layers only animate in Y position and a tiny rotation. No layer may ever intersect the cup.
+- LABELS, "focus-step" system (replaces the always-on lines, tags and floating dots): three steps of 50vh each. Per step: the camera eases to a 3/4 close-up of that layer (01 ORIGIN: crema, 02 ROAST: coffee, 03 NOTES: cup); the other layers fade to 20% opacity; a small pulsing ring marker sits ON the layer's surface, with ONE elbow leader line (short diagonal, then horizontal) drawn from the marker to the text block; the text block has a giant solid numeral (01/02/03, about 160px, crema at 12% opacity) behind the copy; the layer's name (CREMA / COFFEE / CUP) appears as a small mono line inside the text block. Remove the permanent SPOON/CREMA/COFFEE/CUP/SAUCER tags. All labels projected from real 3D positions every frame, fully on screen, never clipped, above the canvas. After step 3 the camera pulls back to the full stack for the dissolve into R2.
+- Checkpoint screenshots required: 15%, 30%, 45%, 60%, 75%, 90% of the range.
+
+R2: EXPLODED -> BEAN RAIN
+- The layers dissolve (ember-edge noise shader) into beans with no dark frames. The ring forms BEHIND the headline: the text sits in front of the ring, and only about 10% of beans (random ones) pass in front of the letters. Every letter at least 70% visible. The ring is an even circle of about 24vh radius, centred, clear of the nav.
+- Hard rule: no menu text, tag or rail is visible until the bean rain pin has fully ended.
+- Exit: the ring contracts and the beans pour into the vessel that opens the menu.
+
+R3: MENU, "THE POUR WHEEL" (full redesign)
+Photos: list assets/menu. Any drink without a photo is REMOVED everywhere: content.md, markup, rail, counts. Update the title in content.md to match the new count in words (for example "The Signature Four"), and also the numbering of the remaining drinks (01 to 04). If a photo is missing for two or more drinks, stop and tell me.
+One pinned container (100vh) holds EVERYTHING of this section: the 3D panorama, vessel, text and rail. No part of it may sit outside the pin. Scroll length is about 70vh per drink plus 40vh, with snap to each drink.
+- Panorama drum (WebGL): the drink photos are curved planes on a large cylinder around the camera. Scrolling rotates the drum so the active drink's photo faces the viewer (about 58vw x 62vh, right of centre) at full brightness and colour; neighbours curve away to the sides, dimmed to 45%, slightly blurred, with depth parallax. Photos are NOT dimmed to near-black. Normalise all photos with cover-fit, a per-photo focal point, and one warm colour grade (contrast, warm tint, vignette, 4% grain) in the shader. On drum movement add a velocity-driven bend plus a subtle RGB split.
+- Vessel: reuse the hero cup model (not a cone, not a primitive podium), about 35% of the viewport height, floating in the lower-left part of the active photo, overlapping its edge. Per remaining drink: tint the liquid with its hex from content.md and add ONE accent effect: Ember Espresso, fine steam; Cortado Noir, animated latte-art swirl on top; Burnt Caramel Latte, a caramel ribbon falling and spiralling; Cold Drip 18H, ice cubes in a tall glass plus a slow drip; Ember Tonic, rising bubbles plus an orange-peel twist. On drink change the vessel does a 360 degree spin and the liquid colour tweens.
+- Type: the drink name in huge Bodoni Moda italic (clamp 120 to 200px), split by letters. On change, the old letters rotate out on X with a stagger and the new ones rotate in. Where the name crosses the photo's edge the letters invert colour (a duplicate text layer with a clip-path of the photo's rectangle), if feasible; otherwise a clean crema text with a soft shadow. The numeral, description, price (odometer count-up) and serving tag (Hot/Iced) are plain text with NO bordered pills or boxes. Vertical rail at the right edge: one tick per remaining drink with its name, the active one expanded, click and arrow keys step through them.
+- Entry: the beans from R2 pour into the vessel. Exit: the vessel shrinks and turns into the green bean of the Process section.
+- Fallback if below 55 FPS: static panels with a crossfade plus the vessel colour tween. Tell me.
+
+R4: PROCESS EXIT + ATMOSPHERE REDESIGN
+- Process exit: after BREW, the drop elongates and falls; where it lands on the dark background, a circular clip-path reveal (from the landing point) opens the first gallery photo. No colour flip.
+- Atmosphere, "photo tunnel" (replaces the static grid): WebGL image planes (or CSS 3D if cheaper) staggered along the z axis in a loose spiral. Scrolling flies the camera forward through them, with a velocity-driven bend, tilt toward the camera, depth fade and a slow drift. The first three planes carry the captions The bar / The roaster / Late light, the others are uncaptioned. A huge slow outline marquee (text from content.md) scrolls behind in the opposite direction. Hover lifts a plane and shows the View cursor. Use every image in assets/ (not assets/menu). Crisp images, with width/height set. No orphan rows, no grid.
+- Exit: the camera passes through the last plane and a circular crema reveal (from screen centre, 25vh) leads into the finale.
+
+R5: FINALE (full redesign), pinned 160vh on crema
+- 0 to 25%: the headline rises by lines (mask). 25 to 55%: the hero cup and saucer DESCEND from above the viewport, rotating slowly, behind and then in front of the headline, and land on the Reserve pill with a squash and bounce (the pill compresses a little). The pill's position drives the landing point (project the pill's rect into the 3D scene). Remove the small cup preview inside the pill.
+- 55 to 80% impact: a coffee splash crown of about 80 instanced droplets (stretched along their velocity, gravity, espresso and ember tints) plus an ember ripple ring expanding across the page. A coffee spill: an organic stain (noise-edged shader blob) in espresso at 25% opacity spreading from the saucer. 6 to 8 ice cubes (RoundedBoxGeometry, a fresnel glass look with a bright rim, an inner highlight, opacity 0.55, a soft contact shadow so they read on crema) drop in from above with simple physics (gravity, bounce on the pill plane, damping, a little sphere collision) and settle bobbing around the cup. No MeshPhysicalMaterial transmission.
+- 80 to 100%: idle (steam, bobbing, mouse parallax); hovering the pill bursts the droplets and they settle. After settling nothing may overlap the headline, the hours or the address.
+- Footer after the finale: keep the designed version (full EMBER wordmark visible, three plain columns, Back to top). Verify it is fully visible at 1920x1080 and 1366x768.
+
+R6: FINAL QA + POLISH + DEPLOY PREP
+Mobile (hamburger, 150 beans, vertical menu, a simple photo tunnel), accessibility (landmarks, alt text, skip link, focus rings, keyboard, prefers-reduced-motion static fallback, contrast), WebGL failure fallback, meta/SEO/OG/favicon, image optimisation (max 1920px, WebP where possible), cleanup (no logs, pinned CDN versions, relative paths, .gitignore, .nojekyll, README.md), a full-page scroll audit at both resolutions, and the final report with the exact git commands to push and enable GitHub Pages.
+
+Start with R0 now. Give the PROGRESS line and the boundary table, then STOP and WAIT.
