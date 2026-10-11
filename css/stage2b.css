@@ -539,6 +539,7 @@
   align-items: center;
   box-sizing: border-box;
   overflow: hidden;
+  visibility: hidden;
 }
 
 .finale-paper-container {
@@ -573,15 +574,24 @@
   font-variation-settings: "opsz" 11;
   font-weight: 800;
   font-size: clamp(48px, 6vw, 96px);
-  line-height: 1.05;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: #14100D;
-  margin: 24px auto 48px auto;
+  margin: 24px auto 44px auto;
   -webkit-text-stroke: 0.015em #14100D;
+  text-align: center;
+}
+
+.headline-line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
 }
 
 .headline-row {
   display: block;
+  transform: translateY(115%);
+  will-change: transform;
 }
 
 .finale-cta-block {
@@ -593,40 +603,30 @@
 .finale-reserve-pill {
   display: inline-flex;
   align-items: center;
-  gap: 18px;
+  justify-content: center;
+  gap: 16px;
   background-color: #D94F1A;
   color: #FFDCBE;
   border: 1px solid #D94F1A;
   border-radius: 9999px;
-  padding: 10px 32px 10px 12px;
+  padding: 14px 40px;
   font-family: var(--font-mono);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.25s ease, color 0.25s ease;
   position: relative;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .finale-reserve-pill:hover {
-  transform: scale(1.03);
+  transform: scale(1.04);
   background-color: #14100D;
   color: #ECE1CE;
   border-color: #14100D;
-}
-
-.pill-cup-target {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #14100D;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: visible;
-  border: 1px solid rgba(255, 220, 190, 0.3);
 }
 
 .pill-arrow-circle {
@@ -635,6 +635,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.25s ease;
+}
+
+.finale-reserve-pill:hover .pill-arrow-circle {
+  transform: translateX(3px);
 }
 
 .finale-meta-grid {

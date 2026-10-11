@@ -1006,25 +1006,30 @@ export class EmberScroll {
         updatePlanes(0, 0);
         const rev = document.getElementById('process-exit-reveal');
         if (rev) rev.style.opacity = '0';
-        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
+        gsap.set('#atmosphere', { visibility: 'visible' });
+        gsap.set(atmospherePin, { opacity: 1, visibility: 'visible', pointerEvents: 'auto' });
       },
       onEnterBack: () => {
         this.updateSectionState('atmosphere');
         window.emberStage?.setAtmosphereScrub?.(1);
         updatePlanes(1, 0);
-        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
+        gsap.set('#atmosphere', { visibility: 'visible' });
+        gsap.set(atmospherePin, { opacity: 1, visibility: 'visible', pointerEvents: 'auto' });
       },
       onLeave: () => {
-        gsap.set(atmospherePin, { opacity: 0, pointerEvents: 'none' });
+        gsap.set('#atmosphere', { visibility: 'hidden' });
+        gsap.set(atmospherePin, { opacity: 0, visibility: 'hidden', pointerEvents: 'none' });
       },
       onLeaveBack: () => {
-        gsap.set(atmospherePin, { opacity: 0, pointerEvents: 'none' });
+        gsap.set('#atmosphere', { visibility: 'hidden' });
+        gsap.set(atmospherePin, { opacity: 0, visibility: 'hidden', pointerEvents: 'none' });
       },
       onUpdate: (self) => {
         if (!self.isActive) return;
         const p = self.progress;
         window.emberStage?.setAtmosphereScrub?.(p);
-        gsap.set(atmospherePin, { opacity: 1, pointerEvents: 'auto' });
+        gsap.set('#atmosphere', { visibility: 'visible' });
+        gsap.set(atmospherePin, { opacity: 1, visibility: 'visible', pointerEvents: 'auto' });
 
         const v = self.getVelocity ? self.getVelocity() : 0;
         updatePlanes(p, v);
@@ -1038,6 +1043,23 @@ export class EmberScroll {
   // 8. FINALE (Pinned 160vh, crema background)
   // ----------------------------------------------------
   buildFinale() {
+    const line1 = document.querySelector('#finale-headline .line-1');
+    const line2 = document.querySelector('#finale-headline .line-2');
+    const contentInner = document.querySelector('.finale-content-inner');
+
+    const updateHeadline = (p) => {
+      if (line1) {
+        const p1 = Math.min(1, Math.max(0, p / 0.16));
+        const y1 = (1.0 - p1) * 115;
+        line1.style.transform = `translateY(${y1}%)`;
+      }
+      if (line2) {
+        const p2 = Math.min(1, Math.max(0, (p - 0.08) / 0.17));
+        const y2 = (1.0 - p2) * 115;
+        line2.style.transform = `translateY(${y2}%)`;
+      }
+    };
+
     const finaleTrigger = ScrollTrigger.create({
       trigger: '#finale',
       start: 'top top',
@@ -1049,15 +1071,43 @@ export class EmberScroll {
       invalidateOnRefresh: true,
       onEnter: () => {
         this.updateSectionState('finale');
+        updateHeadline(0);
         window.emberStage?.setFinaleScrub?.(0);
+        gsap.set('#finale', { visibility: 'visible', pointerEvents: 'auto' });
+        if (contentInner) gsap.set(contentInner, { opacity: 1 });
       },
       onEnterBack: () => {
         this.updateSectionState('finale');
+        updateHeadline(1);
         window.emberStage?.setFinaleScrub?.(1);
+        gsap.set('#finale', { visibility: 'visible', pointerEvents: 'auto' });
+        if (contentInner) gsap.set(contentInner, { opacity: 1 });
+      },
+      onLeave: () => {
+        this.updateSectionState('footer');
+        gsap.set('#finale', { visibility: 'hidden', pointerEvents: 'none' });
+      },
+      onLeaveBack: () => {
+        this.updateSectionState('atmosphere');
+        gsap.set('#finale', { visibility: 'hidden', pointerEvents: 'none' });
       },
       onUpdate: (self) => {
         if (!self.isActive) return;
-        window.emberStage?.setFinaleScrub?.(self.progress);
+        const p = self.progress;
+        gsap.set('#finale', { visibility: 'visible', pointerEvents: 'auto' });
+
+        // Clean dissolve of content at very end of Finale pin (0.92 to 1.00) into Footer
+        if (contentInner) {
+          if (p >= 0.92) {
+            const exitP = (p - 0.92) / 0.08;
+            contentInner.style.opacity = String(Math.max(0, 1.0 - exitP));
+          } else {
+            contentInner.style.opacity = '1';
+          }
+        }
+
+        updateHeadline(p);
+        window.emberStage?.setFinaleScrub?.(p);
       }
     });
 

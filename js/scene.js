@@ -1478,20 +1478,57 @@ export class EmberScene {
     this.finaleGroup.visible = false;
     this.scene.add(this.finaleGroup);
 
-    // 1. Tumbling Fresnel Ice Cubes (7 rounded cubes)
+    // Helper: RoundedBoxGeometry with smooth beveled/curved edges
+    const createRoundedBoxGeometry = (width = 0.30, height = 0.30, depth = 0.30, segments = 4, radius = 0.055) => {
+      const box = new THREE.BoxGeometry(width, height, depth, segments, segments, segments);
+      const pos = box.attributes.position;
+      const normal = box.attributes.normal;
+      const count = pos.count;
+      const hw = width * 0.5 - radius;
+      const hh = height * 0.5 - radius;
+      const hd = depth * 0.5 - radius;
+      const p = new THREE.Vector3();
+      const c = new THREE.Vector3();
+      const d = new THREE.Vector3();
+
+      for (let i = 0; i < count; i++) {
+        p.fromBufferAttribute(pos, i);
+        c.set(
+          Math.max(-hw, Math.min(hw, p.x)),
+          Math.max(-hh, Math.min(hh, p.y)),
+          Math.max(-hd, Math.min(hd, p.z))
+        );
+        d.subVectors(p, c);
+        const len = d.length();
+        if (len > 0.0001) {
+          d.normalize();
+          p.copy(c).addScaledVector(d, radius);
+          pos.setXYZ(i, p.x, p.y, p.z);
+          normal.setXYZ(i, d.x, d.y, d.z);
+        }
+      }
+      box.computeVertexNormals();
+      return box;
+    };
+
+    // 1. 7 RoundedBox Ice Cubes (Fresnel glass look, bright rim, inner highlight, opacity 0.55, contact shadows)
     this.finaleIceCubes = [];
-    const iceGeo = new THREE.BoxGeometry(0.32, 0.32, 0.32, 2, 2, 2);
+    const iceGeo = createRoundedBoxGeometry(0.30, 0.30, 0.30, 4, 0.055);
     const iceMat = new THREE.ShaderMaterial({
       uniforms: {
-        uFresnelColor: { value: new THREE.Color(0xddeeff) },
-        uCoreColor: { value: new THREE.Color(0x88b0d4) }
+        uFresnelColor: { value: new THREE.Color(0xffffff) },       // Bright crisp white rim highlight
+        uCoreColor: { value: new THREE.Color(0x9fc3dc) },          // Soft glacial cyan core
+        uLightDir: { value: new THREE.Vector3(0.5, 0.8, 0.6).normalize() },
+        uOpacity: { value: 0.55 }                                  // Strictly 0.55 opacity
       },
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vViewDir;
+        varying vec3 vWorldPos;
         void main() {
           vNormal = normalize(normalMatrix * normal);
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
           vViewDir = normalize(cameraPosition - worldPos.xyz);
           gl_Position = projectionMatrix * viewMatrix * worldPos;
         }
@@ -1499,12 +1536,20 @@ export class EmberScene {
       fragmentShader: `
         uniform vec3 uFresnelColor;
         uniform vec3 uCoreColor;
+        uniform vec3 uLightDir;
+        uniform float uOpacity;
         varying vec3 vNormal;
         varying vec3 vViewDir;
+        varying vec3 vWorldPos;
         void main() {
-          float fresnel = pow(1.0 - max(dot(vNormal, vViewDir), 0.0), 2.2);
-          vec3 col = mix(uCoreColor, uFresnelColor, fresnel);
-          float alpha = mix(0.35, 0.85, fresnel);
+          vec3 n = normalize(vNormal);
+          vec3 v = normalize(vViewDir);
+          float fresnel = pow(1.0 - max(dot(n, v), 0.0), 2.0);
+          vec3 h = normalize(uLightDir + v);
+          float spec = pow(max(dot(n, h), 0.0), 28.0) * 0.75;
+          vec3 col = mix(uCoreColor, uFresnelColor, fresnel * 0.85 + spec * 0.5);
+          col += spec * uFresnelColor;
+          float alpha = mix(0.40, 0.95, fresnel) * uOpacity;
           gl_FragColor = vec4(col, alpha);
         }
       `,
@@ -1512,53 +1557,159 @@ export class EmberScene {
       depthWrite: false
     });
 
+    // Contact shadow geometry & shader
+    const shadowGeo = new THREE.CircleGeometry(0.18, 24);
+    const shadowMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uOpacity: { value: 0.28 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uOpacity;
+        varying vec2 vUv;
+        void main() {
+          float r = length(vUv - vec2(0.5)) * 2.0;
+          if (r > 1.0) discard;
+          float alpha = smoothstep(1.0, 0.0, r) * uOpacity;
+          gl_FragColor = vec4(0.08, 0.06, 0.05, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false
+    });
+
+    // 7 cube settled target configurations (flanking cup neatly on left and right sides)
     const cubeConfigs = [
-      { x: -1.75, y: -0.06, z: 0.22, scale: 0.32, rx: 0.8, ry: 1.1, rz: 0.5 },
-      { x: -2.25, y: -0.16, z: -0.18, scale: 0.36, rx: 1.2, ry: 0.7, rz: 0.9 },
-      { x: -1.35, y: -0.22, z: 0.12, scale: 0.28, rx: 0.6, ry: 1.3, rz: 0.4 },
-      { x: 1.55, y: -0.05, z: -0.20, scale: 0.34, rx: 1.0, ry: 0.9, rz: 1.2 },
-      { x: 2.15, y: -0.15, z: 0.24, scale: 0.35, rx: 0.7, ry: 1.4, rz: 0.6 },
-      { x: 1.35, y: -0.22, z: -0.12, scale: 0.26, rx: 1.1, ry: 0.6, rz: 0.8 },
-      { x: 2.45, y: -0.04, z: 0.15, scale: 0.30, rx: 0.9, ry: 1.0, rz: 1.1 }
+      { x: -0.95, y: -0.04, z: 0.15, scale: 0.30, rx: 0.8, ry: 1.1, rz: 0.5, stagger: 0.00 },
+      { x: -1.35, y: -0.12, z: -0.10, scale: 0.33, rx: 1.2, ry: 0.7, rz: 0.9, stagger: 0.04 },
+      { x: -1.75, y: 0.06, z: 0.18, scale: 0.28, rx: 0.6, ry: 1.3, rz: 0.4, stagger: 0.08 },
+      { x: 0.95, y: -0.06, z: 0.16, scale: 0.31, rx: 1.0, ry: 0.9, rz: 1.2, stagger: 0.02 },
+      { x: 1.35, y: 0.08, z: -0.08, scale: 0.34, rx: 0.7, ry: 1.4, rz: 0.6, stagger: 0.06 },
+      { x: 1.75, y: -0.05, z: 0.12, scale: 0.29, rx: 1.1, ry: 0.6, rz: 0.8, stagger: 0.10 },
+      { x: 1.15, y: 0.18, z: 0.20, scale: 0.27, rx: 0.9, ry: 1.0, rz: 1.1, stagger: 0.12 }
     ];
 
     cubeConfigs.forEach(cfg => {
       const mesh = new THREE.Mesh(iceGeo, iceMat);
       mesh.scale.set(cfg.scale, cfg.scale, cfg.scale);
       mesh.position.set(cfg.x, cfg.y, cfg.z);
+
+      const shadow = new THREE.Mesh(shadowGeo, shadowMat.clone());
+      shadow.position.set(cfg.x, cfg.y - 0.08, cfg.z - 0.05);
+
+      this.finaleGroup.add(shadow);
       this.finaleGroup.add(mesh);
+
       this.finaleIceCubes.push({
         mesh,
+        shadow,
         cfg,
         rotSpeed: new THREE.Vector3(cfg.rx, cfg.ry, cfg.rz)
       });
     });
 
-    // 2. Coffee Splash Crown of 60 Instanced Droplets
-    this.splashCount = 60;
-    const splashGeo = new THREE.SphereGeometry(0.042, 8, 8);
-    const splashMat = new THREE.MeshStandardMaterial({
-      roughness: 0.15,
-      metalness: 0.2,
+    // 2. Coffee Spill: Organic noise-edged shader blob spreading from saucer at 25% opacity
+    const spillGeo = new THREE.PlaneGeometry(2.4, 2.4, 32, 32);
+    const spillMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uProgress: { value: 0.0 },
+        uColor: { value: new THREE.Color(0x14100D) },
+        uOpacity: { value: 0.25 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uProgress;
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        varying vec2 vUv;
+        
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+        
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+            f.y
+          );
+        }
+
+        void main() {
+          if (uProgress <= 0.001) {
+            discard;
+          }
+          vec2 p = vUv - vec2(0.5);
+          float r = length(p);
+          float angle = atan(p.y, p.x);
+          
+          float lobes = 0.22 * sin(3.0 * angle + 0.5) 
+                      + 0.16 * sin(5.0 * angle - 1.2) 
+                      + 0.10 * sin(7.0 * angle + 2.1)
+                      + 0.08 * noise(p * 8.0);
+                      
+          float maxRadius = 0.38 * (1.0 + lobes);
+          float currentRadius = maxRadius * clamp(uProgress, 0.0, 1.0);
+          
+          if (r > currentRadius) {
+            discard;
+          }
+          
+          float alpha = smoothstep(currentRadius, currentRadius - 0.02, r) * uOpacity;
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `,
       transparent: true,
-      opacity: 0.92
+      depthWrite: false
+    });
+    this.finaleSpillMesh = new THREE.Mesh(spillGeo, spillMat);
+    this.finaleSpillMesh.position.set(0, 0, -0.01);
+    this.finaleGroup.add(this.finaleSpillMesh);
+
+    // 3. Coffee Splash Crown of 80 Instanced Droplets (stretched along velocity)
+    this.splashCount = 80;
+    const splashGeo = new THREE.ConeGeometry(0.024, 0.065, 8);
+    splashGeo.rotateX(Math.PI / 2);
+    const splashMat = new THREE.MeshStandardMaterial({
+      roughness: 0.12,
+      metalness: 0.15,
+      transparent: true,
+      opacity: 0.95
     });
     this.splashMesh = new THREE.InstancedMesh(splashGeo, splashMat, this.splashCount);
     this.splashMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
     this.splashData = [];
-    const colEspresso = new THREE.Color(0x2A1208);
-    const colEmber = new THREE.Color(0xE0541F);
+    const colEspresso1 = new THREE.Color(0x14100D);
+    const colEspresso2 = new THREE.Color(0x281309);
+    const colEmber1 = new THREE.Color(0xD94F1A);
+    const colEmber2 = new THREE.Color(0xE0541F);
 
     for (let i = 0; i < this.splashCount; i++) {
       const isEmber = (i % 3 === 0);
-      this.splashMesh.setColorAt(i, isEmber ? colEmber : colEspresso);
+      const col = isEmber ? (i % 6 === 0 ? colEmber2 : colEmber1) : (i % 2 === 0 ? colEspresso1 : colEspresso2);
+      this.splashMesh.setColorAt(i, col);
 
-      const angle = (i / this.splashCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-      const speedR = 0.35 + Math.random() * 0.40;
-      const speedY = 0.80 + Math.random() * 0.45;
-      const phase = (i / this.splashCount) * 1.4;
-      const period = 1.2 + Math.random() * 0.3;
+      const angle = (i / this.splashCount) * Math.PI * 2 + (Math.sin(i * 3.7) * 0.15);
+      const speedR = 0.30 + (i % 7) * 0.06;
+      const speedY = 0.85 + (i % 5) * 0.12;
+      const phase = (i / this.splashCount) * 1.5;
+      const period = 1.1 + (i % 4) * 0.1;
 
       this.splashData.push({
         angle,
@@ -1566,40 +1717,18 @@ export class EmberScene {
         speedY,
         phase,
         period,
-        baseScale: 0.7 + Math.random() * 0.6
+        baseScale: 0.75 + (i % 3) * 0.2
       });
     }
     if (this.splashMesh.instanceColor) this.splashMesh.instanceColor.needsUpdate = true;
     this.finaleGroup.add(this.splashMesh);
 
-    // 3. Floating / Tumbling Beans (6 beans)
-    this.finaleBeans = [];
-    if (this.beanMesh) {
-      const beanGeo = this.beanMesh.geometry;
-      const beanMat = this.beanMesh.material;
-      for (let i = 0; i < 6; i++) {
-        const bMesh = new THREE.Mesh(beanGeo, beanMat);
-        const rad = 1.5 + Math.random() * 0.9;
-        const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.4;
-        bMesh.scale.set(0.08, 0.08, 0.08);
-        this.finaleGroup.add(bMesh);
-        this.finaleBeans.push({
-          mesh: bMesh,
-          rad,
-          angle,
-          speed: 0.35 + Math.random() * 0.25,
-          rotSpeed: new THREE.Vector3(Math.random() * 2, Math.random() * 2, Math.random() * 2),
-          z: (Math.random() - 0.5) * 0.4
-        });
-      }
-    }
-
-    // 4. Ember Ripple Ring expanding every 3 seconds
-    const ringGeo = new THREE.RingGeometry(0.08, 0.12, 48);
+    // 4. Ember Ripple Ring expanding across the page on impact
+    const ringGeo = new THREE.RingGeometry(0.08, 0.14, 64);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xE0541F,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
       side: THREE.DoubleSide,
       depthWrite: false
     });
@@ -2695,33 +2824,34 @@ export class EmberScene {
     if (this.turntableGroup) this.turntableGroup.visible = false;
     if (this.menuBgPlane) this.menuBgPlane.visible = false;
 
-    // Assemble cup
+    // Assemble cup & saucer
     if (this.saucerMesh) this.saucerMesh.position.y = 0;
     if (this.cupMesh) this.cupMesh.position.y = 0;
     if (this.coffeeMesh) this.coffeeMesh.visible = false;
     if (this.foamMesh) this.foamMesh.visible = false;
     if (this.spoonMesh) this.spoonMesh.visible = false;
-    if (this.liquidMesh) this.liquidMesh.visible = true;
+    if (this.liquidMesh) {
+      this.liquidMesh.visible = true;
+      if (this.liquidMesh.material && this.liquidMesh.material.color) {
+        this.liquidMesh.material.color.setHex(0x1a0d06);
+      }
+    }
 
     if (!this.cupGroup) return;
-    this.cupGroup.visible = true;
-    if (this.finaleGroup) this.finaleGroup.visible = true;
 
-    // Find the pill cup target element in the DOM
-    const targetEl = document.getElementById('pill-cup-target');
+    // Project Reserve pill element in DOM to 3D world space
+    const reserveBtn = document.getElementById('finale-reserve-btn');
     let targetWorldX = 0;
-    let targetWorldY = 0;
+    let targetWorldY = -0.20;
 
-    if (targetEl) {
-      const rect = targetEl.getBoundingClientRect();
+    if (reserveBtn) {
+      const rect = reserveBtn.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
 
-      // Project into 3D world space at Z=0
       const ndcX = (centerX / window.innerWidth) * 2 - 1;
       const ndcY = -(centerY / window.innerHeight) * 2 + 1;
 
-      // Camera FOV 36, Z 6.1
       const vFOV = (36 * Math.PI) / 180;
       const halfHeight = Math.tan(vFOV / 2) * 6.1;
       const halfWidth = halfHeight * (window.innerWidth / window.innerHeight);
@@ -2733,24 +2863,166 @@ export class EmberScene {
     this._finaleTargetX = targetWorldX;
     this._finaleTargetY = targetWorldY;
 
-    // Shrinks (scrub) from ~0.28 down to ~0.052 (perfect fit inside 48px target circle!)
     const p = Math.max(0, Math.min(progress, 1.0));
-    const startX = targetWorldX;
-    const startY = targetWorldY + 0.20;
-    const startScale = 0.28;
-    const endScale = 0.052;
+    const baseCupScale = 0.27;
 
-    const curScale = THREE.MathUtils.lerp(startScale, endScale, p);
-    const curX = THREE.MathUtils.lerp(startX, targetWorldX, p);
-    const curY = THREE.MathUtils.lerp(startY, targetWorldY, p);
+    // Phase 1: 0 to 25% - Headline rises by lines (mask) in DOM. Cup is waiting above viewport.
+    if (p < 0.25) {
+      this.cupGroup.visible = false;
+      if (this.finaleGroup) this.finaleGroup.visible = false;
+      if (this.steamParticles) this.steamParticles.visible = false;
+      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
+      return;
+    }
 
-    this.cupGroup.position.set(curX, curY, 0);
-    this.cupGroup.scale.set(curScale, curScale, curScale);
-    this.cupGroup.rotation.x = 0.24;
-    this.cupGroup.rotation.z = 0.0;
+    this.cupGroup.visible = true;
 
+    // Phase 2: 25 to 55% - Cup & saucer DESCEND from above viewport, rotating slowly, behind then in front of headline, landing on pill with squash & bounce
+    if (p < 0.50) {
+      const tDescend = (p - 0.25) / 0.25; // 0 to 1
+      const fallEase = tDescend * tDescend; // gravitational acceleration
+      const startY = targetWorldY + 3.4;
+      const curY = THREE.MathUtils.lerp(startY, targetWorldY, fallEase);
+      const curZ = THREE.MathUtils.lerp(-0.45, 0.15, Math.min(1.0, tDescend * 1.5));
+      const curRotY = tDescend * Math.PI * 1.6;
+
+      this.cupGroup.position.set(targetWorldX, curY, curZ);
+      this.cupGroup.scale.set(baseCupScale, baseCupScale, baseCupScale);
+      this.cupGroup.rotation.set(0.32, curRotY, 0.0);
+
+      if (this.finaleGroup) this.finaleGroup.visible = false;
+      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
+    } else if (p < 0.55) {
+      // 50% to 55%: Impact Squash & Bounce
+      const tBounce = (p - 0.50) / 0.05; // 0 to 1
+      const squashSin = Math.sin(tBounce * Math.PI);
+      const sy = baseCupScale * (1.0 - 0.22 * squashSin);
+      const sxz = baseCupScale * (1.0 + 0.11 * squashSin);
+      const reboundY = 0.12 * Math.sin(tBounce * Math.PI * 2) * (1.0 - tBounce);
+
+      this.cupGroup.position.set(targetWorldX, targetWorldY + Math.max(0, reboundY), 0.15);
+      this.cupGroup.scale.set(sxz, sy, sxz);
+      this.cupGroup.rotation.set(0.30, Math.PI * 1.6, 0.0);
+
+      // DOM Reserve Pill Compress & Bounce
+      if (reserveBtn) {
+        const pillScaleX = 1.0 + 0.06 * squashSin;
+        const pillScaleY = 1.0 - 0.12 * squashSin;
+        reserveBtn.style.transform = `scale(${pillScaleX}, ${pillScaleY})`;
+      }
+    } else {
+      // 55% to 100%: Settled Cup on Pill
+      this.cupGroup.position.set(targetWorldX, targetWorldY, 0.15);
+      this.cupGroup.scale.set(baseCupScale, baseCupScale, baseCupScale);
+      this.cupGroup.rotation.set(0.28, Math.PI * 1.6, 0.0);
+      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
+    }
+
+    // Phase 3: 50% to 80% Impact effects (coffee splash crown, ripple ring, coffee spill, ice cubes drop-in)
+    if (this.finaleGroup && p >= 0.50) {
+      this.finaleGroup.visible = true;
+      this.finaleGroup.position.set(targetWorldX, targetWorldY, 0.1);
+
+      // 1. Coffee Spill: Organic noise-edged shader blob spreading from saucer at 25% opacity
+      if (this.finaleSpillMesh) {
+        const spillProgress = Math.min(1.0, (p - 0.50) / 0.25);
+        this.finaleSpillMesh.material.uniforms.uProgress.value = spillProgress;
+      }
+
+      // 2. Ember Ripple Ring
+      if (this.finaleRippleRing) {
+        const ringProgress = Math.min(1.0, (p - 0.50) / 0.28);
+        const ringScale = THREE.MathUtils.lerp(0.2, 4.6, ringProgress);
+        const ringOpacity = Math.max(0, (1.0 - ringProgress) * 0.85);
+        this.finaleRippleRing.scale.set(ringScale, ringScale, ringScale);
+        this.finaleRippleRing.material.opacity = ringOpacity;
+      }
+
+      // 3. Ice Cubes Drop-in Physics (falling from above, bouncing on pill plane, settling around cup)
+      this.finaleIceCubes.forEach((item, idx) => {
+        const cfg = item.cfg;
+        const cubeT = Math.min(1.0, Math.max(0, (p - 0.50 - cfg.stagger) / 0.22));
+
+        if (cubeT <= 0) {
+          item.mesh.visible = false;
+          item.shadow.visible = false;
+        } else {
+          item.mesh.visible = true;
+          item.shadow.visible = true;
+
+          const startY = cfg.y + 2.2;
+          const fallY = THREE.MathUtils.lerp(startY, cfg.y, Math.min(1.0, cubeT * 1.4));
+          const bounce = Math.max(0, 0.35 * Math.sin(cubeT * Math.PI * 2.5) * (1.0 - cubeT));
+          const curY = fallY + bounce;
+
+          item.mesh.position.set(cfg.x, curY, cfg.z);
+          item.mesh.rotation.x = cfg.rx * cubeT * 4.0;
+          item.mesh.rotation.y = cfg.ry * cubeT * 4.0;
+          item.mesh.rotation.z = cfg.rz * cubeT * 4.0;
+
+          // Soft contact shadow right beneath cube on pill plane
+          item.shadow.position.set(cfg.x, cfg.y - 0.08, cfg.z - 0.05);
+          const shadowScale = THREE.MathUtils.lerp(0.4, 1.0, 1.0 - Math.min(1.0, (curY - cfg.y) * 2.0));
+          const shadowOpacity = THREE.MathUtils.lerp(0.05, 0.28, 1.0 - Math.min(1.0, (curY - cfg.y) * 2.0));
+          item.shadow.scale.set(shadowScale, shadowScale, shadowScale);
+          item.shadow.material.uniforms.uOpacity.value = shadowOpacity;
+        }
+      });
+
+      // 4. Coffee Splash Crown of 80 Instanced Droplets (stretched along velocity)
+      if (this.splashMesh) {
+        const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+        const g = 3.6;
+
+        for (let i = 0; i < this.splashCount; i++) {
+          const d = this.splashData[i];
+          const dropT = Math.min(1.0, Math.max(0, (p - 0.50) / 0.26));
+
+          if (dropT <= 0 || dropT >= 0.98) {
+            dummy.scale.set(0, 0, 0);
+            dummy.updateMatrix();
+          } else {
+            const vy = d.speedY;
+            const h = vy * dropT - 0.5 * g * dropT * dropT;
+            const r = d.speedR * dropT;
+            const vx = Math.cos(d.angle) * d.speedR;
+            const vz = Math.sin(d.angle) * d.speedR * 0.5;
+            const vyCurrent = vy - g * dropT;
+
+            if (h >= -0.05) {
+              const x = Math.cos(d.angle) * r;
+              const y = h;
+              const z = Math.sin(d.angle) * r * 0.5;
+
+              dummy.position.set(x, y, z);
+
+              const speed = Math.sqrt(vx * vx + vyCurrent * vyCurrent + vz * vz);
+              if (speed > 0.02) {
+                dummy.lookAt(x + vx, y + vyCurrent, z + vz);
+              }
+
+              const baseScale = d.baseScale * (1.0 - dropT * 0.45);
+              const stretchY = baseScale * (1.0 + speed * 1.8);
+              const stretchXZ = baseScale * 0.75;
+              dummy.scale.set(stretchXZ, stretchXZ, stretchY);
+              dummy.updateMatrix();
+            } else {
+              dummy.scale.set(0, 0, 0);
+              dummy.updateMatrix();
+            }
+          }
+          this.splashMesh.setMatrixAt(i, dummy.matrix);
+        }
+        this.splashMesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+
+    // Steam wisps active when settled
     if (this.steamParticles) {
-      this.steamParticles.visible = p < 0.6;
+      this.steamParticles.visible = p >= 0.65;
+      if (this.steamParticles.visible) {
+        this.steamParticles.position.set(targetWorldX, targetWorldY + 0.15, 0.2);
+      }
     }
 
     this.camera.position.set(0, 0, 6.1);
@@ -2879,77 +3151,67 @@ export class EmberScene {
         this.processBeanMesh.rotation.y += delta * 0.40;
         this.processBeanMesh.rotation.x = 0.15 + Math.sin(elapsedTime * 0.6) * 0.08;
       } else if (this.scrub.sectionMode === 'finale' && this.cupGroup) {
-        this.cupGroup.rotation.y += delta * 0.75;
+        const p = this.scrub.finaleProgress || 0;
 
-        // Finale Group Animation
-        if (this.finaleGroup && this.finaleGroup.visible) {
-          // 1. Tumbling Ice Cubes
-          this.finaleIceCubes.forEach(item => {
-            item.mesh.rotation.x += item.rotSpeed.x * delta;
-            item.mesh.rotation.y += item.rotSpeed.y * delta;
-            item.mesh.rotation.z += item.rotSpeed.z * delta;
-            item.mesh.position.y = item.cfg.y + Math.sin(elapsedTime * 1.5 + item.cfg.x) * 0.04;
-          });
-
-          // 2. Floating Beans
-          this.finaleBeans.forEach(b => {
-            b.mesh.rotation.x += b.rotSpeed.x * delta;
-            b.mesh.rotation.y += b.rotSpeed.y * delta;
-            b.angle += b.speed * delta;
-            b.mesh.position.set(
-              Math.cos(b.angle) * b.rad,
-              Math.sin(b.angle) * (b.rad * 0.6) + Math.sin(elapsedTime * 1.8 + b.angle) * 0.06,
-              b.z
-            );
-          });
-
-          // 3. Coffee Splash Crown of 60 Instanced Droplets
-          const g = 3.8;
-          const burst = this.splashBurst;
-          const dummy = this._reusableDummy;
-
-          for (let i = 0; i < this.splashCount; i++) {
-            const d = this.splashData[i];
-            const t = (elapsedTime + d.phase) % d.period;
-
-            // Arcing parabola: y = vy * t - 0.5 * g * t^2
-            const vy = d.speedY * burst;
-            const h = vy * t - 0.5 * g * t * t;
-            const r = d.speedR * burst * t;
-
-            if (h >= -0.05) {
-              const x = Math.cos(d.angle) * r;
-              const z = Math.sin(d.angle) * r * 0.5;
-              const y = h;
-              const scale = Math.max(0.001, d.baseScale * (1.0 - (t / d.period) * 0.4));
-              dummy.position.set(x, y, z);
-              dummy.scale.set(scale, scale, scale);
-              dummy.updateMatrix();
-            } else {
-              dummy.scale.set(0, 0, 0);
-              dummy.updateMatrix();
+        // When in idle state (p >= 0.80)
+        if (p >= 0.80 && this.finaleGroup && this.finaleGroup.visible) {
+          // 1. Subtle gentle bobbing on settled ice cubes
+          this.finaleIceCubes.forEach((item, idx) => {
+            if (item.mesh.visible) {
+              item.mesh.position.y = item.cfg.y + Math.sin(elapsedTime * 1.5 + idx * 0.9) * 0.016;
+              item.mesh.rotation.x += item.rotSpeed.x * delta * 0.25;
+              item.mesh.rotation.y += item.rotSpeed.y * delta * 0.25;
             }
-            this.splashMesh.setMatrixAt(i, dummy.matrix);
+          });
+
+          // 2. Interactive splash burst on pill hover (when this.splashBurst > 1.02)
+          if (this.splashBurst > 1.02 && this.splashMesh) {
+            const burst = this.splashBurst;
+            const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
+            const g = 3.6;
+
+            for (let i = 0; i < this.splashCount; i++) {
+              const d = this.splashData[i];
+              const t = (elapsedTime * 1.6 + d.phase) % d.period;
+              const vy = d.speedY * burst;
+              const h = vy * t - 0.5 * g * t * t;
+              const r = d.speedR * burst * t;
+
+              if (h >= -0.05 && t < d.period * 0.92) {
+                const x = Math.cos(d.angle) * r;
+                const y = h;
+                const z = Math.sin(d.angle) * r * 0.5;
+                dummy.position.set(x, y, z);
+
+                const vx = Math.cos(d.angle) * d.speedR * burst;
+                const vyCur = vy - g * t;
+                const speed = Math.sqrt(vx * vx + vyCur * vyCur);
+                if (speed > 0.02) dummy.lookAt(x + vx, y + vyCur, z);
+
+                const scale = Math.max(0.001, d.baseScale * (1.0 - (t / d.period) * 0.45));
+                dummy.scale.set(scale * 0.75, scale * 0.75, scale * (1.0 + speed * 1.6));
+                dummy.updateMatrix();
+              } else {
+                dummy.scale.set(0, 0, 0);
+                dummy.updateMatrix();
+              }
+              this.splashMesh.setMatrixAt(i, dummy.matrix);
+            }
+            this.splashMesh.instanceMatrix.needsUpdate = true;
+            this.splashBurst = THREE.MathUtils.lerp(this.splashBurst, 1.0, delta * 3.0);
           }
-          this.splashMesh.instanceMatrix.needsUpdate = true;
 
-          // Settle burst back to 1.0
-          this.splashBurst = THREE.MathUtils.lerp(this.splashBurst, 1.0, delta * 3.2);
+          // 3. Mouse Parallax on cup and finaleGroup
+          const targetParallaxX = this.mouse.x * 0.26;
+          const targetParallaxY = this.mouse.y * 0.16;
+          const targetBaseX = this._finaleTargetX || 0;
+          const targetBaseY = this._finaleTargetY || -0.20;
 
-          // 4. Ember Ripple Ring expanding every 3 seconds
-          if (this.finaleRippleRing) {
-            const tRipple = (elapsedTime % 3.0) / 3.0;
-            const ringScale = THREE.MathUtils.lerp(0.2, 2.6, tRipple);
-            const ringOpacity = Math.max(0, (1.0 - tRipple) * 0.85);
-            this.finaleRippleRing.scale.set(ringScale, ringScale, ringScale);
-            this.finaleRippleRing.material.opacity = ringOpacity;
-          }
+          this.cupGroup.position.x = THREE.MathUtils.lerp(this.cupGroup.position.x, targetBaseX + targetParallaxX, 0.08);
+          this.cupGroup.position.y = THREE.MathUtils.lerp(this.cupGroup.position.y, targetBaseY + targetParallaxY, 0.08);
 
-          // 5. Mouse Parallax on finaleGroup
-          const targetParallaxX = this.mouse.x * 0.35;
-          const targetParallaxY = this.mouse.y * 0.22;
-          this.finaleGroup.position.x = THREE.MathUtils.lerp(this.finaleGroup.position.x, (this._finaleTargetX || 0) + targetParallaxX, 0.08);
-          this.finaleGroup.position.y = THREE.MathUtils.lerp(this.finaleGroup.position.y, (this._finaleTargetY || 0) + targetParallaxY, 0.08);
+          this.finaleGroup.position.x = THREE.MathUtils.lerp(this.finaleGroup.position.x, targetBaseX + targetParallaxX, 0.08);
+          this.finaleGroup.position.y = THREE.MathUtils.lerp(this.finaleGroup.position.y, targetBaseY + targetParallaxY, 0.08);
         }
       }
 
