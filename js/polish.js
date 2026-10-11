@@ -268,5 +268,11 @@ export class EmberPolish {
         }
       });
     });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setOpen(false);
+      }
+    });
   }
 }

@@ -24,8 +24,24 @@ class EmberApp {
 
     // 1. Initialize Three.js 3D Scene first so stageAPI is ready
     if (this.canvas) {
-      this.scene = new EmberScene(this.canvas);
-      this.stageAPI = this.scene.getStageAPI();
+      try {
+        this.scene = new EmberScene(this.canvas);
+        this.stageAPI = this.scene.getStageAPI();
+      } catch (err) {
+        document.body.classList.add('webgl-unavailable');
+        this.stageAPI = {
+          setHeroScrub: () => {},
+          setDiveScrub: () => {},
+          setExplodedScrub: () => {},
+          setBeanRainScrub: () => {},
+          setMenuScrub: () => {},
+          setDrinkActive: () => {},
+          setProcessScrub: () => {},
+          setAtmosphereScrub: () => {},
+          setFinaleScrub: () => {},
+          burstFinaleSplash: () => {}
+        };
+      }
       window.emberStage = this.stageAPI;
     }
 
@@ -71,8 +87,6 @@ class EmberApp {
     // 6. Initialize Polish & Micro-interactions (Phase 7)
     this.polish = new EmberPolish(this.lenis);
     window.emberPolish = this.polish;
-
-    console.log('[EMBER] Stage 2B & Phase 7 Initialized.');
   }
 
   initFooter() {

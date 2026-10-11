@@ -471,13 +471,13 @@
   margin: 0;
   padding: 0;
   transform-style: preserve-3d;
-  will-change: transform, opacity, filter;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  will-change: transform, opacity;
+  transition: box-shadow 0.4s ease;
   cursor: none;
 }
 
 .tunnel-plane:hover {
-  transform: translate3d(var(--tx, 0px), calc(var(--ty, 0px) - 16px), calc(var(--tz, 0px) + 50px)) scale(1.04) !important;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
   box-shadow: 0 32px 75px rgba(0, 0, 0, 0.8), 0 0 45px rgba(224, 84, 31, 0.25);
   z-index: 80;
 }
@@ -1304,5 +1304,19 @@
     grid-template-columns: 1fr;
     gap: 36px;
   }
+}
+
+/* WebGL Failure Fallback */
+body.webgl-unavailable #webgl-canvas-container,
+body.webgl-unavailable #webgl-beans-fg {
+  display: none !important;
+}
+
+body.webgl-unavailable .hero-section {
+  background: radial-gradient(circle at center 60%, rgba(224, 84, 31, 0.15), transparent 70%);
+}
+
+body.webgl-unavailable .pour-wheel-container {
+  background: #14100D;
 }
 

@@ -244,13 +244,21 @@ export class EmberScroll {
         invalidateOnRefresh: true,
         onEnter: () => {
           this.updateSectionState('hero');
+          gsap.set('.hero-wordmark-container', { visibility: 'visible', opacity: 1 });
           gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setHeroScrub?.(0);
         },
         onEnterBack: () => {
           this.updateSectionState('hero');
+          gsap.set('.hero-wordmark-container', { visibility: 'visible', opacity: 1 });
           gsap.set(['.dive-fade-overlay', '.dive-headline'], { opacity: 0 });
           window.emberStage?.setHeroScrub?.(1);
+        },
+        onLeave: () => {
+          gsap.set('.hero-wordmark-container', { visibility: 'hidden', opacity: 0 });
+        },
+        onLeaveBack: () => {
+          gsap.set('.hero-wordmark-container', { visibility: 'hidden', opacity: 0 });
         },
         onUpdate: (self) => {
           if (!self.isActive) return;
@@ -301,10 +309,12 @@ export class EmberScroll {
         invalidateOnRefresh: true,
         onEnter: () => {
           this.updateSectionState('dive');
+          gsap.set('.hero-wordmark-container', { visibility: 'hidden', opacity: 0 });
           window.emberStage?.setDiveScrub?.(0, 0);
         },
         onEnterBack: () => {
           this.updateSectionState('dive');
+          gsap.set('.hero-wordmark-container', { visibility: 'hidden', opacity: 0 });
           window.emberStage?.setDiveScrub?.(1, 0);
         },
         onUpdate: (self) => {
@@ -914,17 +924,11 @@ export class EmberScroll {
         marqueeTrack.style.transform = `translateX(${marqueeOffset}px)`;
       }
 
-      // Velocity tilt & bend
-      const bendX = gsap.utils.clamp(-8, 8, velocity * 0.003);
-      const bendY = gsap.utils.clamp(-5, 5, velocity * 0.0015);
+      // Velocity tilt & bend applied directly without creating GSAP tweens
+      const bendX = gsap.utils.clamp(-6, 6, velocity * 0.003);
+      const bendY = gsap.utils.clamp(-4, 4, velocity * 0.0015);
       if (track) {
-        gsap.to(track, {
-          rotateX: bendX,
-          rotateY: bendY,
-          duration: 0.35,
-          ease: 'power1.out',
-          overwrite: 'auto'
-        });
+        track.style.transform = `rotateX(${bendX}deg) rotateY(${bendY}deg)`;
       }
 
       planes.forEach((p, idx) => {
@@ -933,29 +937,24 @@ export class EmberScroll {
         // Relative Z position to camera
         const zRel = p.initZ + currentCameraZ;
 
-        // Depth fade, blur, and opacity
+        // Depth fade & opacity (hardware compositor, 60 FPS)
         let opacity = 1.0;
-        let filter = 'none';
 
         if (zRel < -1800) {
           // Far in the distance
           const tFar = Math.max(0, (zRel + 2800) / 1000);
           opacity = 0.25 + tFar * 0.25;
-          filter = `brightness(0.6) blur(${3 * (1 - tFar)}px)`;
         } else if (zRel < -400) {
           // Approaching camera
           const tMid = (zRel + 1800) / 1400;
           opacity = 0.5 + tMid * 0.5;
-          filter = `brightness(${0.75 + tMid * 0.25}) blur(0px)`;
         } else if (zRel <= 120) {
           // In focus passing camera
           opacity = 1.0;
-          filter = 'brightness(1.0) blur(0px)';
         } else {
           // Passing behind camera: rapid graceful fade out before clipping
           const tBehind = Math.min((zRel - 120) / 120, 1.0);
           opacity = Math.max(0, 1.0 - tBehind);
-          filter = 'blur(1px)';
         }
 
         // Tilt toward camera when near
@@ -972,11 +971,7 @@ export class EmberScroll {
         const posY = `calc(-50% + ${p.initY}vh + ${driftY}px)`;
 
         p.el.style.transform = `translate3d(${posX}, ${posY}, ${zRel}px) rotateZ(${p.rotZ}deg) rotateX(${rotX}deg)`;
-        p.el.style.setProperty('--tx', posX);
-        p.el.style.setProperty('--ty', posY);
-        p.el.style.setProperty('--tz', `${zRel}px`);
         p.el.style.opacity = opacity.toFixed(3);
-        p.el.style.filter = filter;
       });
 
       // Exit transition into Finale (p >= 0.88 to 1.0)
@@ -986,7 +981,7 @@ export class EmberScroll {
           // Starts from screen center at 25vh, expands to cover viewport (135vh)
           const radiusVh = 25 + tCrema * 110;
           cremaReveal.style.clipPath = `circle(${radiusVh}vh at 50% 50%)`;
-        } else {
+        } else if (cremaReveal.style.clipPath && cremaReveal.style.clipPath !== 'circle(0% at 50% 50%)') {
           cremaReveal.style.clipPath = 'circle(0% at 50% 50%)';
         }
       }
@@ -1028,9 +1023,6 @@ export class EmberScroll {
         if (!self.isActive) return;
         const p = self.progress;
         window.emberStage?.setAtmosphereScrub?.(p);
-        gsap.set('#atmosphere', { visibility: 'visible' });
-        gsap.set(atmospherePin, { opacity: 1, visibility: 'visible', pointerEvents: 'auto' });
-
         const v = self.getVelocity ? self.getVelocity() : 0;
         updatePlanes(p, v);
       }

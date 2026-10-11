@@ -732,7 +732,8 @@ export class EmberScene {
   }
 
   createInstancedBeans() {
-    const totalBeans = 400;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const totalBeans = isMobile ? 150 : 400;
 
     const beanGeo = new THREE.SphereGeometry(0.125, 18, 18);
     const pos = beanGeo.attributes.position;
@@ -785,11 +786,12 @@ export class EmberScene {
 
     // Base 24vh ring radius (FOV 36, Z=6.1 -> 100vh = 3.9639 units -> 24vh = 0.951 units)
     const base24vhRadius = 0.951;
+    const numSectors = Math.max(1, Math.floor(totalBeans / 4));
+    const perLayer = Math.max(1, Math.floor(totalBeans / 5));
 
     for (let i = 0; i < totalBeans; i++) {
-      // 100 sectors x 4 layers = 400 beans
-      const sector = Math.floor(i / 4); // 0 to 99
-      const layer = i % 4;             // 0, 1, 2, 3
+      const sector = Math.floor(i / 4);
+      const layer = i % 4;
 
       // Organic rain scatter across the viewport for falling rain phase
       const pseudoX = (((i * 37.1) % 9.6) - 4.8) + ((i % 5) - 2) * 0.12;
@@ -828,7 +830,7 @@ export class EmberScene {
       }
 
       // Ring Target Coordinates (ONE clean ring, true circle of radius 24vh, uniform band 4 beans thick)
-      const baseAngle = (sector / 100) * Math.PI * 2.0;
+      const baseAngle = (sector / numSectors) * Math.PI * 2.0;
       const ringAngle = baseAngle + layer * 0.015; // slight organic stagger
 
       // Uniform band ~4 beans thick centered on 24vh (0.9513 units)
@@ -850,27 +852,27 @@ export class EmberScene {
       let localX = 0, localY = 0, localZ = 0;
       if (layerIdx === 0) {
         // Spoon
-        const theta = (i / 400) * Math.PI * 2;
+        const theta = (i / totalBeans) * Math.PI * 2;
         localX = 0.05 + Math.cos(theta) * 0.22;
         localY = 1.86 + Math.sin(theta) * 0.12;
         localZ = ((i % 7) - 3) * 0.02;
       } else if (layerIdx === 1) {
         // Crema disc
-        const r = Math.sqrt((i % 80) / 80) * 0.98;
+        const r = Math.sqrt((i % perLayer) / perLayer) * 0.98;
         const theta = (i * 2.39996) % (Math.PI * 2);
         localX = Math.cos(theta) * r;
         localY = 1.34;
         localZ = Math.sin(theta) * r * 0.35;
       } else if (layerIdx === 2) {
         // Coffee disc
-        const r = Math.sqrt((i % 80) / 80) * 0.92;
+        const r = Math.sqrt((i % perLayer) / perLayer) * 0.92;
         const theta = (i * 2.39996) % (Math.PI * 2);
         localX = Math.cos(theta) * r;
         localY = 0.82;
         localZ = Math.sin(theta) * r * 0.35;
       } else if (layerIdx === 3) {
         // Cup body
-        const h = ((i % 80) / 80);
+        const h = ((i % perLayer) / perLayer);
         const r = 0.65 + h * 0.40;
         const theta = (i * 2.39996) % (Math.PI * 2);
         localX = Math.cos(theta) * r;
@@ -878,7 +880,7 @@ export class EmberScene {
         localZ = Math.sin(theta) * r * 0.35;
       } else {
         // Saucer
-        const r = 0.60 + Math.sqrt((i % 80) / 80) * 1.35;
+        const r = 0.60 + Math.sqrt((i % perLayer) / perLayer) * 1.35;
         const theta = (i * 2.39996) % (Math.PI * 2);
         localX = Math.cos(theta) * r;
         localY = -1.38;
