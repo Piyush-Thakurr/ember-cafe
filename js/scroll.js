@@ -667,9 +667,12 @@ export class EmberScroll {
       // Letter rotation stagger on name change
       if (nameEl) {
         const renderChars = () => {
-          nameEl.innerHTML = data.name.split('').map(c => 
-            c === ' ' ? '<span class="name-char">&nbsp;</span>' : `<span class="name-char">${c}</span>`
-          ).join('');
+          const words = data.name.split(' ');
+          nameEl.innerHTML = words.map(w => 
+            `<span class="name-word" style="white-space: nowrap; display: inline-flex;">${
+              w.split('').map(c => `<span class="name-char">${c}</span>`).join('')
+            }</span>`
+          ).join('<span class="name-space">&nbsp;</span>');
           const newChars = nameEl.querySelectorAll('.name-char');
           gsap.fromTo(newChars, 
             { rotateX: -90, opacity: 0 }, 
@@ -771,6 +774,9 @@ export class EmberScroll {
         }
       }
     });
+
+    this.menuTrigger = menuTrigger;
+    this.updateMenuDrinkDOM = updateMenuDrinkDOM;
 
     // Rail tick click handlers
     railTicks.forEach((tick, idx) => {
