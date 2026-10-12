@@ -711,7 +711,7 @@ export class EmberScroll {
 
     gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 0, pointerEvents: 'none' });
 
-    const snapPoints = [0.06, 0.33, 0.65, 0.92];
+    const snapPoints = [0.08, 0.30, 0.52, 0.76];
 
     const menuTrigger = ScrollTrigger.create({
       trigger: '#menu',
@@ -750,17 +750,17 @@ export class EmberScroll {
         const p = self.progress;
         window.emberStage?.setMenuScrub?.(p);
 
-        // Content fade in at entry (0 to 0.08) and fade out at exit (0.92 to 1.0)
+        // Content fade in at entry (0 to 0.08) and fade out at exit (0.86 to 1.0)
         if (p < 0.08) {
           gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: p / 0.08, pointerEvents: p > 0.04 ? 'auto' : 'none' });
-        } else if (p > 0.92) {
-          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: (1.0 - p) / 0.08, pointerEvents: p < 0.96 ? 'auto' : 'none' });
+        } else if (p > 0.86) {
+          gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: (1.0 - p) / 0.14, pointerEvents: p < 0.95 ? 'auto' : 'none' });
         } else {
           gsap.set(['.menu-content-pin', '.turntable-rail'], { opacity: 1, pointerEvents: 'auto' });
         }
 
-        const drinkIdx = Math.min(3, Math.floor(p / 0.24));
-        if (drinkIdx !== currentDrinkIndex && p < 0.95) {
+        const drinkIdx = Math.min(3, Math.floor(p / 0.22));
+        if (drinkIdx !== currentDrinkIndex && p <= 0.86) {
           updateMenuDrinkDOM(drinkIdx);
           window.emberStage?.setDrinkActive?.(drinkIdx);
         }
@@ -778,7 +778,7 @@ export class EmberScroll {
         if (menuTrigger) {
           const start = menuTrigger.start;
           const totalDistance = menuTrigger.end - menuTrigger.start;
-          const targetP = snapPoints[idx] !== undefined ? snapPoints[idx] : (idx * 0.28 + 0.06);
+          const targetP = snapPoints[idx] !== undefined ? snapPoints[idx] : (idx * 0.22 + 0.08);
           const targetScroll = start + targetP * totalDistance;
           if (this.lenis) {
             this.lenis.scrollTo(targetScroll, { duration: 1.0 });
@@ -854,7 +854,7 @@ export class EmberScroll {
         });
         gsap.set('.process-content-pin', { opacity: 1, pointerEvents: 'auto' });
         const rev = document.getElementById('process-exit-reveal');
-        if (rev) { rev.style.opacity = '1'; rev.style.clipPath = 'circle(150% at 72% 76%)'; }
+        if (rev) { rev.style.opacity = '0'; rev.style.clipPath = 'circle(0% at 72% 76%)'; }
       },
       onLeave: () => {
         gsap.set('.process-content-pin', { opacity: 0, pointerEvents: 'none' });
@@ -1088,10 +1088,10 @@ export class EmberScroll {
         const p = self.progress;
         gsap.set('#finale', { visibility: 'visible', pointerEvents: 'auto' });
 
-        // Clean dissolve of content at very end of Finale pin (0.92 to 1.00) into Footer
+        // Clean dissolve of content at very end of Finale pin (0.96 to 1.00) into Footer
         if (contentInner) {
-          if (p >= 0.92) {
-            const exitP = (p - 0.92) / 0.08;
+          if (p >= 0.96) {
+            const exitP = (p - 0.96) / 0.04;
             contentInner.style.opacity = String(Math.max(0, 1.0 - exitP));
           } else {
             contentInner.style.opacity = '1';

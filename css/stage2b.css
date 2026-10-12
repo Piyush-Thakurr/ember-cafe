@@ -273,10 +273,9 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
-  background: #14100D;
-  margin-top: 0;
   margin-bottom: -100vh;
+  overflow: hidden;
+  background: transparent;
 }
 
 .process-crema-reveal {
@@ -392,10 +391,9 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
-  background: #14100D;
-  margin-top: 0;
   margin-bottom: -100vh;
+  overflow: hidden;
+  background: transparent;
   z-index: 20;
 }
 
@@ -603,13 +601,12 @@
 .finale-reserve-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
+  gap: 18px;
   background-color: #D94F1A;
-  color: #FFDCBE;
+  color: #14100D;
   border: 1px solid #D94F1A;
   border-radius: 9999px;
-  padding: 14px 40px;
+  padding: 10px 32px 10px 12px;
   font-family: var(--font-mono);
   font-size: 15px;
   font-weight: 700;
@@ -618,15 +615,29 @@
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.25s ease, color 0.25s ease;
   position: relative;
-  transform-origin: center center;
   will-change: transform;
 }
 
 .finale-reserve-pill:hover {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background-color: #14100D;
   color: #ECE1CE;
   border-color: #14100D;
+}
+
+.pill-cup-target {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #14100D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: visible;
+  border: 1px solid rgba(255, 220, 190, 0.35);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
 }
 
 .pill-arrow-circle {

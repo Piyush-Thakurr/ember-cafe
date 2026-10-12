@@ -2515,6 +2515,8 @@ export class EmberScene {
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
     if (this.processGroup) this.processGroup.visible = false;
     if (this.finaleGroup) this.finaleGroup.visible = false;
+    const canvasContainer = document.getElementById('webgl-canvas-container');
+    if (canvasContainer) canvasContainer.style.zIndex = '5';
 
     const isMobile = window.innerWidth <= 768;
     const baseScale = isMobile ? 0.55 : 0.88;
@@ -2525,14 +2527,17 @@ export class EmberScene {
     // Menu Vessel floating and exit transition
     if (this.menuVesselGroup) {
       this.menuVesselGroup.visible = true;
-      if (progress >= 0.92) {
-        // Exit transition: vessel shrinks and rises into Process green bean
-        const tExit = (progress - 0.92) / 0.08;
-        const curScale = THREE.MathUtils.lerp(baseScale, 0.16, tExit);
-        const curY = THREE.MathUtils.lerp(targetY, 0.85, tExit);
+      if (progress >= 0.86) {
+        // Exit transition: vessel shrinks and glides toward Process green bean at (1.48, 0, 0)
+        const tExit = (progress - 0.86) / 0.14;
+        const curScale = THREE.MathUtils.lerp(baseScale, 0.20, tExit);
+        const curX = THREE.MathUtils.lerp(targetX, 1.48, tExit);
+        const curY = THREE.MathUtils.lerp(targetY, 0.0, tExit);
+        const curZ = THREE.MathUtils.lerp(targetZ, 0.0, tExit);
         this.menuVesselGroup.scale.set(curScale, curScale, curScale);
-        this.menuVesselGroup.position.set(targetX, curY, targetZ);
-        this.menuVesselGroup.rotation.x = THREE.MathUtils.lerp(0.18, 0.45, tExit);
+        this.menuVesselGroup.position.set(curX, curY, curZ);
+        this.menuVesselGroup.rotation.y = THREE.MathUtils.lerp(0, Math.PI * 2.0, tExit);
+        this.menuVesselGroup.rotation.x = THREE.MathUtils.lerp(0.18, 0.35, tExit);
       } else {
         const bobY = targetY + Math.sin(progress * Math.PI * 4) * 0.025;
         this.menuVesselGroup.position.set(targetX, bobY, targetZ);
@@ -2659,6 +2664,10 @@ export class EmberScene {
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
     if (this.turntableGroup) this.turntableGroup.visible = false;
     if (this.menuBgPlane) this.menuBgPlane.visible = false;
+    if (this.panoramaDrumGroup) this.panoramaDrumGroup.visible = false;
+    if (this.menuVesselGroup) this.menuVesselGroup.visible = false;
+    const canvasContainerProc = document.getElementById('webgl-canvas-container');
+    if (canvasContainerProc) canvasContainerProc.style.zIndex = '5';
 
     if (!this.processGroup) return;
     this.processGroup.visible = true;
@@ -2812,7 +2821,11 @@ export class EmberScene {
     if (this.beanMeshFg) this.beanMeshFg.visible = false;
     if (this.turntableGroup) this.turntableGroup.visible = false;
     if (this.menuBgPlane) this.menuBgPlane.visible = false;
+    if (this.panoramaDrumGroup) this.panoramaDrumGroup.visible = false;
+    if (this.menuVesselGroup) this.menuVesselGroup.visible = false;
     if (this.finaleGroup) this.finaleGroup.visible = false;
+    const canvasContainerAtmo = document.getElementById('webgl-canvas-container');
+    if (canvasContainerAtmo) canvasContainerAtmo.style.zIndex = '5';
   }
 
   setFinaleScrub(progress) {
@@ -2825,10 +2838,28 @@ export class EmberScene {
     if (this.fgCanvas) this.fgCanvas.style.display = 'none';
     if (this.turntableGroup) this.turntableGroup.visible = false;
     if (this.menuBgPlane) this.menuBgPlane.visible = false;
+    if (this.panoramaDrumGroup) this.panoramaDrumGroup.visible = false;
+    if (this.menuVesselGroup) this.menuVesselGroup.visible = false;
+
+    const canvasContainerFin = document.getElementById('webgl-canvas-container');
+    if (canvasContainerFin) canvasContainerFin.style.zIndex = '30';
+
+    // Reset dissolve and opacity back to 100% solid
+    this.setLayersDissolve(0.0);
+    this.setLayerOpacities();
 
     // Assemble cup & saucer
-    if (this.saucerMesh) this.saucerMesh.position.y = 0;
-    if (this.cupMesh) this.cupMesh.position.y = 0;
+    if (this.saucerMesh) {
+      this.saucerMesh.visible = true;
+      this.saucerMesh.position.set(0, 0, 0);
+    }
+    if (this.cupMesh) {
+      this.cupMesh.visible = true;
+      this.cupMesh.position.set(0, 0, 0);
+    }
+    if (this.handleMesh) {
+      this.handleMesh.visible = true;
+    }
     if (this.coffeeMesh) this.coffeeMesh.visible = false;
     if (this.foamMesh) this.foamMesh.visible = false;
     if (this.spoonMesh) this.spoonMesh.visible = false;
@@ -2841,13 +2872,13 @@ export class EmberScene {
 
     if (!this.cupGroup) return;
 
-    // Project Reserve pill element in DOM to 3D world space
-    const reserveBtn = document.getElementById('finale-reserve-btn');
+    // Project pill-cup-target starting icon in DOM to 3D world space
+    const targetEl = document.getElementById('pill-cup-target') || document.getElementById('finale-reserve-btn');
     let targetWorldX = 0;
-    let targetWorldY = -0.20;
+    let targetWorldY = -0.15;
 
-    if (reserveBtn) {
-      const rect = reserveBtn.getBoundingClientRect();
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
 
@@ -2865,166 +2896,34 @@ export class EmberScene {
     this._finaleTargetX = targetWorldX;
     this._finaleTargetY = targetWorldY;
 
-    const p = Math.max(0, Math.min(progress, 1.0));
-    const baseCupScale = 0.27;
-
-    // Phase 1: 0 to 25% - Headline rises by lines (mask) in DOM. Cup is waiting above viewport.
-    if (p < 0.25) {
-      this.cupGroup.visible = false;
-      if (this.finaleGroup) this.finaleGroup.visible = false;
-      if (this.steamParticles) this.steamParticles.visible = false;
-      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
-      return;
+    if (this.finaleGroup) {
+      this.finaleGroup.visible = false;
     }
+
+    const p = Math.max(0, Math.min(progress, 1.0));
+
+    // Cup & saucer descend from above (0 to 0.60) and dock neatly inside #pill-cup-target (0.60 to 1.0)
+    const tDescend = Math.min(p / 0.60, 1.0);
+    const easeLanding = 1.0 - Math.pow(1.0 - tDescend, 2.5);
 
     this.cupGroup.visible = true;
 
-    // Phase 2: 25 to 55% - Cup & saucer DESCEND from above viewport, rotating slowly, behind then in front of headline, landing on pill with squash & bounce
-    if (p < 0.50) {
-      const tDescend = (p - 0.25) / 0.25; // 0 to 1
-      const fallEase = tDescend * tDescend; // gravitational acceleration
-      const startY = targetWorldY + 3.4;
-      const curY = THREE.MathUtils.lerp(startY, targetWorldY, fallEase);
-      const curZ = THREE.MathUtils.lerp(-0.45, 0.15, Math.min(1.0, tDescend * 1.5));
-      const curRotY = tDescend * Math.PI * 1.6;
+    const startX = 0;
+    const startY = targetWorldY + 3.2; // Descends from above
+    const startScale = 0.52;
+    const endScale = 0.036; // Fits neatly inside the 48px circle target!
 
-      this.cupGroup.position.set(targetWorldX, curY, curZ);
-      this.cupGroup.scale.set(baseCupScale, baseCupScale, baseCupScale);
-      this.cupGroup.rotation.set(0.32, curRotY, 0.0);
+    const curScale = THREE.MathUtils.lerp(startScale, endScale, easeLanding);
+    const curX = THREE.MathUtils.lerp(startX, targetWorldX, easeLanding);
+    const curY = THREE.MathUtils.lerp(startY, targetWorldY + 0.015, easeLanding);
+    const curRotY = (1.0 - easeLanding) * Math.PI * 1.6;
 
-      if (this.finaleGroup) this.finaleGroup.visible = false;
-      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
-    } else if (p < 0.55) {
-      // 50% to 55%: Impact Squash & Bounce
-      const tBounce = (p - 0.50) / 0.05; // 0 to 1
-      const squashSin = Math.sin(tBounce * Math.PI);
-      const sy = baseCupScale * (1.0 - 0.22 * squashSin);
-      const sxz = baseCupScale * (1.0 + 0.11 * squashSin);
-      const reboundY = 0.12 * Math.sin(tBounce * Math.PI * 2) * (1.0 - tBounce);
+    this.cupGroup.position.set(curX, curY, 0.15);
+    this.cupGroup.scale.set(curScale, curScale, curScale);
+    this.cupGroup.rotation.set(0.24, curRotY, 0.0);
 
-      this.cupGroup.position.set(targetWorldX, targetWorldY + Math.max(0, reboundY), 0.15);
-      this.cupGroup.scale.set(sxz, sy, sxz);
-      this.cupGroup.rotation.set(0.30, Math.PI * 1.6, 0.0);
-
-      // DOM Reserve Pill Compress & Bounce
-      if (reserveBtn) {
-        const pillScaleX = 1.0 + 0.06 * squashSin;
-        const pillScaleY = 1.0 - 0.12 * squashSin;
-        reserveBtn.style.transform = `scale(${pillScaleX}, ${pillScaleY})`;
-      }
-    } else {
-      // 55% to 100%: Settled Cup on Pill
-      this.cupGroup.position.set(targetWorldX, targetWorldY, 0.15);
-      this.cupGroup.scale.set(baseCupScale, baseCupScale, baseCupScale);
-      this.cupGroup.rotation.set(0.28, Math.PI * 1.6, 0.0);
-      if (reserveBtn) reserveBtn.style.transform = 'scale(1, 1)';
-    }
-
-    // Phase 3: 50% to 80% Impact effects (coffee splash crown, ripple ring, coffee spill, ice cubes drop-in)
-    if (this.finaleGroup && p >= 0.50) {
-      this.finaleGroup.visible = true;
-      this.finaleGroup.position.set(targetWorldX, targetWorldY, 0.1);
-
-      // 1. Coffee Spill: Organic noise-edged shader blob spreading from saucer at 25% opacity
-      if (this.finaleSpillMesh) {
-        const spillProgress = Math.min(1.0, (p - 0.50) / 0.25);
-        this.finaleSpillMesh.material.uniforms.uProgress.value = spillProgress;
-      }
-
-      // 2. Ember Ripple Ring
-      if (this.finaleRippleRing) {
-        const ringProgress = Math.min(1.0, (p - 0.50) / 0.28);
-        const ringScale = THREE.MathUtils.lerp(0.2, 4.6, ringProgress);
-        const ringOpacity = Math.max(0, (1.0 - ringProgress) * 0.85);
-        this.finaleRippleRing.scale.set(ringScale, ringScale, ringScale);
-        this.finaleRippleRing.material.opacity = ringOpacity;
-      }
-
-      // 3. Ice Cubes Drop-in Physics (falling from above, bouncing on pill plane, settling around cup)
-      this.finaleIceCubes.forEach((item, idx) => {
-        const cfg = item.cfg;
-        const cubeT = Math.min(1.0, Math.max(0, (p - 0.50 - cfg.stagger) / 0.22));
-
-        if (cubeT <= 0) {
-          item.mesh.visible = false;
-          item.shadow.visible = false;
-        } else {
-          item.mesh.visible = true;
-          item.shadow.visible = true;
-
-          const startY = cfg.y + 2.2;
-          const fallY = THREE.MathUtils.lerp(startY, cfg.y, Math.min(1.0, cubeT * 1.4));
-          const bounce = Math.max(0, 0.35 * Math.sin(cubeT * Math.PI * 2.5) * (1.0 - cubeT));
-          const curY = fallY + bounce;
-
-          item.mesh.position.set(cfg.x, curY, cfg.z);
-          item.mesh.rotation.x = cfg.rx * cubeT * 4.0;
-          item.mesh.rotation.y = cfg.ry * cubeT * 4.0;
-          item.mesh.rotation.z = cfg.rz * cubeT * 4.0;
-
-          // Soft contact shadow right beneath cube on pill plane
-          item.shadow.position.set(cfg.x, cfg.y - 0.08, cfg.z - 0.05);
-          const shadowScale = THREE.MathUtils.lerp(0.4, 1.0, 1.0 - Math.min(1.0, (curY - cfg.y) * 2.0));
-          const shadowOpacity = THREE.MathUtils.lerp(0.05, 0.28, 1.0 - Math.min(1.0, (curY - cfg.y) * 2.0));
-          item.shadow.scale.set(shadowScale, shadowScale, shadowScale);
-          item.shadow.material.uniforms.uOpacity.value = shadowOpacity;
-        }
-      });
-
-      // 4. Coffee Splash Crown of 80 Instanced Droplets (stretched along velocity)
-      if (this.splashMesh) {
-        const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
-        const g = 3.6;
-
-        for (let i = 0; i < this.splashCount; i++) {
-          const d = this.splashData[i];
-          const dropT = Math.min(1.0, Math.max(0, (p - 0.50) / 0.26));
-
-          if (dropT <= 0 || dropT >= 0.98) {
-            dummy.scale.set(0, 0, 0);
-            dummy.updateMatrix();
-          } else {
-            const vy = d.speedY;
-            const h = vy * dropT - 0.5 * g * dropT * dropT;
-            const r = d.speedR * dropT;
-            const vx = Math.cos(d.angle) * d.speedR;
-            const vz = Math.sin(d.angle) * d.speedR * 0.5;
-            const vyCurrent = vy - g * dropT;
-
-            if (h >= -0.05) {
-              const x = Math.cos(d.angle) * r;
-              const y = h;
-              const z = Math.sin(d.angle) * r * 0.5;
-
-              dummy.position.set(x, y, z);
-
-              const speed = Math.sqrt(vx * vx + vyCurrent * vyCurrent + vz * vz);
-              if (speed > 0.02) {
-                dummy.lookAt(x + vx, y + vyCurrent, z + vz);
-              }
-
-              const baseScale = d.baseScale * (1.0 - dropT * 0.45);
-              const stretchY = baseScale * (1.0 + speed * 1.8);
-              const stretchXZ = baseScale * 0.75;
-              dummy.scale.set(stretchXZ, stretchXZ, stretchY);
-              dummy.updateMatrix();
-            } else {
-              dummy.scale.set(0, 0, 0);
-              dummy.updateMatrix();
-            }
-          }
-          this.splashMesh.setMatrixAt(i, dummy.matrix);
-        }
-        this.splashMesh.instanceMatrix.needsUpdate = true;
-      }
-    }
-
-    // Steam wisps active when settled
     if (this.steamParticles) {
-      this.steamParticles.visible = p >= 0.65;
-      if (this.steamParticles.visible) {
-        this.steamParticles.position.set(targetWorldX, targetWorldY + 0.15, 0.2);
-      }
+      this.steamParticles.visible = p < 0.65;
     }
 
     this.camera.position.set(0, 0, 6.1);
@@ -3154,66 +3053,22 @@ export class EmberScene {
         this.processBeanMesh.rotation.x = 0.15 + Math.sin(elapsedTime * 0.6) * 0.08;
       } else if (this.scrub.sectionMode === 'finale' && this.cupGroup) {
         const p = this.scrub.finaleProgress || 0;
-
-        // When in idle state (p >= 0.80)
-        if (p >= 0.80 && this.finaleGroup && this.finaleGroup.visible) {
-          // 1. Subtle gentle bobbing on settled ice cubes
-          this.finaleIceCubes.forEach((item, idx) => {
-            if (item.mesh.visible) {
-              item.mesh.position.y = item.cfg.y + Math.sin(elapsedTime * 1.5 + idx * 0.9) * 0.016;
-              item.mesh.rotation.x += item.rotSpeed.x * delta * 0.25;
-              item.mesh.rotation.y += item.rotSpeed.y * delta * 0.25;
-            }
-          });
-
-          // 2. Interactive splash burst on pill hover (when this.splashBurst > 1.02)
-          if (this.splashBurst > 1.02 && this.splashMesh) {
-            const burst = this.splashBurst;
-            const dummy = this._reusableDummy || (this._reusableDummy = new THREE.Object3D());
-            const g = 3.6;
-
-            for (let i = 0; i < this.splashCount; i++) {
-              const d = this.splashData[i];
-              const t = (elapsedTime * 1.6 + d.phase) % d.period;
-              const vy = d.speedY * burst;
-              const h = vy * t - 0.5 * g * t * t;
-              const r = d.speedR * burst * t;
-
-              if (h >= -0.05 && t < d.period * 0.92) {
-                const x = Math.cos(d.angle) * r;
-                const y = h;
-                const z = Math.sin(d.angle) * r * 0.5;
-                dummy.position.set(x, y, z);
-
-                const vx = Math.cos(d.angle) * d.speedR * burst;
-                const vyCur = vy - g * t;
-                const speed = Math.sqrt(vx * vx + vyCur * vyCur);
-                if (speed > 0.02) dummy.lookAt(x + vx, y + vyCur, z);
-
-                const scale = Math.max(0.001, d.baseScale * (1.0 - (t / d.period) * 0.45));
-                dummy.scale.set(scale * 0.75, scale * 0.75, scale * (1.0 + speed * 1.6));
-                dummy.updateMatrix();
-              } else {
-                dummy.scale.set(0, 0, 0);
-                dummy.updateMatrix();
-              }
-              this.splashMesh.setMatrixAt(i, dummy.matrix);
-            }
-            this.splashMesh.instanceMatrix.needsUpdate = true;
-            this.splashBurst = THREE.MathUtils.lerp(this.splashBurst, 1.0, delta * 3.0);
+        if (p >= 0.60) {
+          const targetEl = document.getElementById('pill-cup-target') || document.getElementById('finale-reserve-btn');
+          if (targetEl) {
+            const rect = targetEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const ndcX = (centerX / window.innerWidth) * 2 - 1;
+            const ndcY = -(centerY / window.innerHeight) * 2 + 1;
+            const vFOV = (36 * Math.PI) / 180;
+            const halfHeight = Math.tan(vFOV / 2) * 6.1;
+            const halfWidth = halfHeight * (window.innerWidth / window.innerHeight);
+            const targetWorldX = ndcX * halfWidth;
+            const targetWorldY = ndcY * halfHeight + 0.015;
+            this.cupGroup.position.x = THREE.MathUtils.lerp(this.cupGroup.position.x, targetWorldX, 0.2);
+            this.cupGroup.position.y = THREE.MathUtils.lerp(this.cupGroup.position.y, targetWorldY, 0.2);
           }
-
-          // 3. Mouse Parallax on cup and finaleGroup
-          const targetParallaxX = this.mouse.x * 0.26;
-          const targetParallaxY = this.mouse.y * 0.16;
-          const targetBaseX = this._finaleTargetX || 0;
-          const targetBaseY = this._finaleTargetY || -0.20;
-
-          this.cupGroup.position.x = THREE.MathUtils.lerp(this.cupGroup.position.x, targetBaseX + targetParallaxX, 0.08);
-          this.cupGroup.position.y = THREE.MathUtils.lerp(this.cupGroup.position.y, targetBaseY + targetParallaxY, 0.08);
-
-          this.finaleGroup.position.x = THREE.MathUtils.lerp(this.finaleGroup.position.x, targetBaseX + targetParallaxX, 0.08);
-          this.finaleGroup.position.y = THREE.MathUtils.lerp(this.finaleGroup.position.y, targetBaseY + targetParallaxY, 0.08);
         }
       }
 
